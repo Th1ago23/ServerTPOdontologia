@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id                  Int                  @id @default(autoincrement())
+  name                String
+  email               String               @unique
+  password            String
+  cpf                 String               @unique
+  phone               String               @unique
+  birthDate           DateTime
+  address             String
+  city                String
+  number              String
+  complement          String?
+  state               String
+  zipCode             String
+  country             String
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  appointments        Appointment[]
+  appointmentRequests AppointmentRequest[] @relation(name: "PatientToAppointmentRequest") // Nome explícito da relação
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  isAdmin   Boolean  @default(false) // Indica se o usuário é administrador
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Appointment {
+  id                  Int                  @id @default(autoincrement())
+  patientId           Int
+  patient             Patient              @relation(fields: [patientId], references: [id])
+  date                DateTime
+  time                String
+  notes               String?
+  status              AppointmentStatus    @default(PENDING)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  appointmentRequests AppointmentRequest[] @relation(name: "AppointmentToAppointmentRequest") // Nome explícito da relação
+}
+
+model AppointmentRequest {
+  id            Int              @id @default(autoincrement())
+  patientId     Int
+  patient       Patient          @relation(fields: [patientId], references: [id], name: "PatientToAppointmentRequest")
+  date          DateTime
+  time          String
+  notes         String?
+  status        AppointmentStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  appointmentId Int?              @unique
+  appointment   Appointment?      @relation(fields: [appointmentId], references: [id], name: "AppointmentToAppointmentRequest")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  RESCHEDULED
+}

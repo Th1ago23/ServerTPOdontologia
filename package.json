@@ -9,7 +9,9 @@
     "start": "node dist/server.js",
     "postinstall": "prisma generate",
     "prepare": "npm run build",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "migrate": "prisma migrate deploy",
+    "deploy": "prisma migrate deploy && npm run seed"
   },
   "keywords": [],
   "author": "",

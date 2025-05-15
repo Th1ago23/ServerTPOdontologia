@@ -11,7 +11,8 @@
     "prepare": "npm run build",
     "seed": "ts-node prisma/seed.ts",
     "migrate": "prisma migrate deploy",
-    "deploy": "prisma migrate deploy && npm run seed"
+    "deploy": "prisma migrate deploy && npm run seed",
+    "railway:deploy": "npm install && npm run build && prisma migrate deploy && npm run seed && npm start"
   },
   "keywords": [],
   "author": "",

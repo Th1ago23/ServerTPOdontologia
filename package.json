@@ -12,7 +12,7 @@
     "seed": "ts-node prisma/seed.ts",
     "migrate": "prisma migrate deploy",
     "deploy": "prisma migrate deploy && npm run seed",
-    "railway:deploy": "npm install && npm run build && prisma migrate deploy && npm run seed && npm start"
+    "railway:deploy": "npm install && npm run build && prisma db push --accept-data-loss && prisma migrate deploy && npm run seed && npm start"
   },
   "keywords": [],
   "author": "",

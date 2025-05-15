@@ -48,6 +48,31 @@ class PatientController {
     }
   }
 
+  async getMyProfile(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const patientId = req.patientId;
+      
+      if (!patientId) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+
+      const patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+      });
+
+      if (!patient) {
+        res.status(404).json({ error: "Paciente não encontrado" });
+        return;
+      }
+
+      res.status(200).json(patient);
+    } catch (error) {
+      console.error("Erro ao buscar perfil:", error);
+      res.status(500).json({ error: "Erro ao buscar perfil" });
+    }
+  }
+
   async listAll(req: AuthRequest, res: Response): Promise<void> {
     try {
       const patients = await prisma.patient.findMany();

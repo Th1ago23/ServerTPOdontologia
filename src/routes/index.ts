@@ -6,6 +6,7 @@ import adminRoutes from './adminRoutes';
 import { authenticateToken } from '../middleware/authMiddleware';
 import AuthController from '../controllers/AuthController';
 import AppointmentRequestController from '../controllers/AppointmentRequestController';
+import AppointmentManagementController from '../controllers/AppointmentManagementController';
 
 const router = express.Router();
 
@@ -22,6 +23,9 @@ router.post('/appointment-requests', authenticateToken, AppointmentRequestContro
 
 // Listar consultas do paciente
 router.get('/appointment-requests', authenticateToken, AppointmentRequestController.listPatientAppointments.bind(AppointmentRequestController));
+
+// Histórico de consultas do paciente
+router.get('/appointments/history/:patientId', authenticateToken, AppointmentManagementController.getAppointmentHistory.bind(AppointmentManagementController));
 
 router.get('/test-api', (req, res) => {
     res.status(200).json({ message: 'API está funcionando!' });

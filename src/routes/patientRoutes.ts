@@ -4,13 +4,16 @@ import { authenticateToken, authenticateAdmin } from '../middleware/authMiddlewa
 
 const router = express.Router();
 
-// Rota para cadastro de pacientes (acesso público, por enquanto)
+// Rota para cadastro de pacientes (acesso público)
 router.post('/', PatientController.create);
 
 // Rotas que exigem autenticação e privilégios de administrador
-router.get('/', authenticateToken, authenticateAdmin, PatientController.listAll); // Exemplo: Listar todos
-router.get('/:id', authenticateToken, authenticateAdmin, PatientController.getById); // Exemplo: Buscar por ID
-router.put('/:id', authenticateToken, authenticateAdmin, PatientController.update); // Exemplo: Atualizar
-router.delete('/:id', authenticateToken, authenticateAdmin, PatientController.delete); // Exemplo: Deletar
+router.get('/', authenticateToken, authenticateAdmin, PatientController.listAll);
+router.put('/:id', authenticateToken, authenticateAdmin, PatientController.update);
+router.delete('/:id', authenticateToken, authenticateAdmin, PatientController.delete);
+
+// Rotas para o paciente acessar seu próprio perfil
+router.get('/me', authenticateToken, PatientController.getMyProfile);
+router.get('/:id', authenticateToken, PatientController.getById);
 
 export default router;

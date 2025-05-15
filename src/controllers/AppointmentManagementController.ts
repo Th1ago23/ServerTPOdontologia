@@ -386,41 +386,47 @@ class AppointmentManagementController {
   async getAppointmentHistory(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { patientId } = req.params;
-      const authenticatedPatientId = req.user?.patientId;
+      const authenticatedPatientId = req.patientId;
 
       // Verifica se o paciente está autenticado
       if (!authenticatedPatientId) {
-        return res.status(401).json({ message: 'Não autorizado' });
+        res.status(401).json({ message: 'Não autorizado' });
+        return;
       }
 
       // Verifica se o paciente está tentando acessar seu próprio histórico
-      if (authenticatedPatientId !== patientId) {
-        return res.status(403).json({ message: 'Acesso proibido' });
+      if (authenticatedPatientId.toString() !== patientId) {
+        res.status(403).json({ message: 'Acesso proibido' });
+        return;
       }
 
       // Busca o histórico de consultas do paciente
       const appointments = await prisma.appointment.findMany({
         where: {
-          patientId: patientId,
-          status: 'COMPLETED' // Apenas consultas finalizadas
+          patientId: parseInt(patientId),
+          status: AppointmentStatus.COMPLETED
         },
         orderBy: {
           date: 'desc'
         },
         include: {
-          doctor: {
-            select: {
-              name: true,
-              specialty: true
+          appointmentRequests: {
+            include: {
+              doctor: {
+                select: {
+                  name: true,
+                  specialty: true
+                }
+              }
             }
           }
         }
       });
 
-      return res.status(200).json(appointments);
+      res.status(200).json(appointments);
     } catch (error) {
       console.error('Erro ao buscar histórico de consultas:', error);
-      return res.status(500).json({ message: 'Erro ao buscar histórico de consultas' });
+      res.status(500).json({ message: 'Erro ao buscar histórico de consultas' });
     }
   }
 

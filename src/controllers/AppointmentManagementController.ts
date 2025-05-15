@@ -404,20 +404,15 @@ class AppointmentManagementController {
       const appointments = await prisma.appointment.findMany({
         where: {
           patientId: parseInt(patientId),
-          status: AppointmentStatus.COMPLETED
+          status: AppointmentStatus.CONFIRMED
         },
         orderBy: {
           date: 'desc'
         },
         include: {
           appointmentRequests: {
-            include: {
-              doctor: {
-                select: {
-                  name: true,
-                  specialty: true
-                }
-              }
+            select: {
+              notes: true
             }
           }
         }

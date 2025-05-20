@@ -38,6 +38,17 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model Doctor {
+  id                Int                  @id @default(autoincrement())
+  name              String
+  email             String               @unique
+  password          String
+  specialty         String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  appointmentRequests AppointmentRequest[]
+}
+
 model Appointment {
   id                  Int                  @id @default(autoincrement())
   patientId           Int
@@ -55,6 +66,8 @@ model AppointmentRequest {
   id            Int              @id @default(autoincrement())
   patientId     Int
   patient       Patient          @relation(fields: [patientId], references: [id], name: "PatientToAppointmentRequest")
+  doctorId      Int?
+  doctor        Doctor?          @relation(fields: [doctorId], references: [id])
   date          DateTime
   time          String
   notes         String?
@@ -70,4 +83,5 @@ enum AppointmentStatus {
   CONFIRMED
   CANCELLED
   RESCHEDULED
+  COMPLETED
 }

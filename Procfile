@@ -1,1 +1,1 @@
-web: npm install && npm run build && npm run railway:deploy && npm start 
+web: npm run build && npm start 

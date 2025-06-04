@@ -8,11 +8,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "postinstall": "npx prisma generate",
-    "prepare": "npm run build",
     "seed": "ts-node prisma/seed.ts",
     "migrate": "npx prisma migrate deploy",
     "deploy": "npx prisma migrate deploy && npm run seed",
-    "heroku-postbuild": "npm install && npm run build && npx prisma generate"
+    "heroku-postbuild": "npm run build"
   },
   "keywords": [],
   "author": "",

@@ -7,10 +7,10 @@
     "dev": "ts-node-dev src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "postinstall": "npx prisma generate",
+    "postinstall": "node ./node_modules/.bin/prisma generate",
     "seed": "ts-node prisma/seed.ts",
-    "migrate": "npx prisma migrate deploy",
-    "deploy": "npx prisma migrate deploy && npm run seed",
+    "migrate": "node ./node_modules/.bin/prisma migrate deploy",
+    "deploy": "node ./node_modules/.bin/prisma migrate deploy && npm run seed",
     "heroku-postbuild": "npm run build"
   },
   "keywords": [],

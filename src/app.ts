@@ -2,17 +2,33 @@ import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import routes from './routes';
 import dotenv from 'dotenv';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 
 dotenv.config();
 
 const app = express();
 
+const allowedOrigins = [
+  'https://www.tatianepeixotoodonto.live',
+  'http://www.tatianepeixotoodonto.live',
+  'https://tatianepeixotoodonto.live',
+  'http://tatianepeixotoodonto.live',
+  process.env.FRONTEND_URL || 'http://localhost:5173'
+];
+
 // Configuração do CORS
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+const corsOptions: CorsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permite requisições sem origin (ex: ferramentas internas, mobile, etc)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
   credentials: true
 };
 

@@ -13,6 +13,9 @@
     "deploy": "npx prisma migrate deploy && npm run seed",
     "heroku-postbuild": "npm run build"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

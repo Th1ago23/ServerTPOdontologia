@@ -16,20 +16,32 @@ const corsOptions = {
   credentials: true
 };
 
+// Middleware para corrigir URLs com duplo slash
+app.use((req, res, next) => {
+  req.url = req.url.replace(/\/+/g, '/');
+  next();
+});
+
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
+
+// Rota raiz
+app.get('/', (req, res) => {
+  res.json({ message: 'API TPOdontologia está funcionando!' });
+});
+
+// Rotas da API
 app.use('/api', routes);
 
+// Middleware de erro
 interface AppError extends Error {
   statusCode?: number;
 }
 
 app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
-
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Erro interno do servidor';
-
   res.status(statusCode).json({ error: message });
 });
 

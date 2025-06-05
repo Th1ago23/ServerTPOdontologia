@@ -1,9 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import routes from './routes';
-import adminRoutes from './routes/adminRoutes'; // Importando o arquivo index.ts de rotas
 import dotenv from 'dotenv';
-import cors from 'cors'; // Importe o middleware CORS
+import cors from 'cors';
 
 dotenv.config();
 
@@ -11,7 +10,7 @@ const app = express();
 
 // Configuração do CORS
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // URL do seu frontend
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -19,8 +18,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
-app.use('/api', routes); 
-app.use('/api/admin', adminRoutes);
+app.use('/api', routes);
 
 interface AppError extends Error {
   statusCode?: number;

@@ -10,9 +10,14 @@ import AppointmentManagementController from '../controllers/AppointmentManagemen
 
 const router = express.Router();
 
+// Rotas de autenticação
 router.use('/auth', authRoutes);
 router.use('/auth-patient', authPatientRoutes);
+
+// Rotas de pacientes
 router.use('/patients', patientRoutes);
+
+// Rotas de administração
 router.use('/admin', adminRoutes);
 
 // Info do usuário autenticado
@@ -27,8 +32,9 @@ router.get('/appointment-requests', authenticateToken, AppointmentRequestControl
 // Histórico de consultas do paciente
 router.get('/appointments/history/:patientId', authenticateToken, AppointmentManagementController.getAppointmentHistory.bind(AppointmentManagementController));
 
+// Rota de teste da API
 router.get('/test-api', (req, res) => {
-    res.status(200).json({ message: 'API está funcionando!' });
-  });
-  
+  res.status(200).json({ message: 'API está funcionando!' });
+});
+
 export default router;

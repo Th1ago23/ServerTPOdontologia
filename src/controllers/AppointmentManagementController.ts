@@ -42,7 +42,6 @@ class AppointmentManagementController {
         return;
       }
 
-      // 2. Verificar se o horário está dentro do horário de funcionamento (se aplicável)
       const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.date, appointmentRequest.time);
       if (!isWithinWorkingHours) {
         res.status(400).json({ error: "O horário solicitado está fora do horário de funcionamento." });

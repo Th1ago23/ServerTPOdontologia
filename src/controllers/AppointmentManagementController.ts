@@ -31,7 +31,6 @@ class AppointmentManagementController {
         return;
       }
 
-      // *** Lógica de Negócios Adicional ***
 
       const isTimeSlotFree = await this.checkTimeSlotAvailability(
         appointmentRequest.patientId,

@@ -122,7 +122,7 @@ class AuthController {
       });
   
       // Geração do token JWT
-      const token = jwt.sign({ id: patient.id, email: patient.email }, process.env.JWT_SECRET as string, {
+      const token = jwt.sign({ id: patient.id, email: patient.email, isAdmin: false }, process.env.JWT_SECRET as string, {
         expiresIn: "1d",
       });
   
@@ -163,7 +163,7 @@ class AuthController {
         return next(error);
       }
 
-      const token = jwt.sign({ patientId: patient.id }, jwtSecret, { expiresIn: "1h" });
+      const token = jwt.sign({ patientId: patient.id, isAdmin: false }, jwtSecret, { expiresIn: "1h" });
       console.log('Token gerado com sucesso');
       
       res.status(200).json({

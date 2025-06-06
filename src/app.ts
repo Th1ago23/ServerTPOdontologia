@@ -13,7 +13,20 @@ const allowedOrigins = [
   'http://www.tatianepeixotoodonto.live',
   'https://tatianepeixotoodonto.live',
   'http://tatianepeixotoodonto.live',
-  process.env.FRONTEND_URL || 'http://localhost:5173'
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'exp://localhost:19000',
+  'exp://192.168.1.1:19000',
+  'exp://192.168.1.2:19000',
+  'exp://192.168.1.3:19000',
+  'exp://192.168.1.4:19000',
+  'exp://192.168.1.5:19000',
+  'exp://192.168.1.6:19000',
+  'exp://192.168.1.7:19000',
+  'exp://192.168.1.8:19000',
+  'exp://192.168.1.9:19000',
+  'exp://192.168.1.10:19000',
+  'http://localhost:19006',
+  'http://localhost:19000'
 ];
 
 // Configuração do CORS

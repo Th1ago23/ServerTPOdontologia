@@ -10,9 +10,6 @@ import AppointmentManagementController from '../controllers/AppointmentManagemen
 
 const router = express.Router();
 
-// Rota de login unificado
-router.post('/auth/unified-login', AuthController.unifiedLogin);
-
 // Rotas de autenticação
 router.use('/auth', authRoutes);
 router.use('/auth-patient', authPatientRoutes);

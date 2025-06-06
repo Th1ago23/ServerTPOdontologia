@@ -38,12 +38,29 @@ class AuthController {
   async loginUser(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
+      console.log('Tentativa de login:', { email });
+      
       const user = await prisma.user.findUnique({ where: { email } });
-      if (!user || !(await bcrypt.compare(password, user.password))) {
+      console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
+      
+      if (!user) {
+        console.log('Usuário não encontrado');
         res.status(401).json({ error: "Credenciais inválidas" });
         return;
       }
+
+      const passwordMatch = await bcrypt.compare(password, user.password);
+      console.log('Senha corresponde:', passwordMatch ? 'Sim' : 'Não');
+      
+      if (!passwordMatch) {
+        console.log('Senha incorreta');
+        res.status(401).json({ error: "Credenciais inválidas" });
+        return;
+      }
+
       const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, jwtSecret, { expiresIn: "1h" });
+      console.log('Token gerado com sucesso');
+      
       res.status(200).json({ 
         token,
         user: {
@@ -124,18 +141,36 @@ class AuthController {
   async loginPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password } = req.body;
+      console.log('Tentativa de login de paciente:', { email });
+      
       const patient = await prisma.patient.findUnique({ where: { email } });
-      if (!patient || !(await bcrypt.compare(password, patient.password))) {
+      console.log('Paciente encontrado:', patient ? 'Sim' : 'Não');
+      
+      if (!patient) {
+        console.log('Paciente não encontrado');
         const error = new Error("Credenciais inválidas") as CustomError;
         error.statusCode = 401;
         return next(error);
       }
-      const token = jwt.sign({ patientId: patient.id, }, jwtSecret, { expiresIn: "1h" });
+
+      const passwordMatch = await bcrypt.compare(password, patient.password);
+      console.log('Senha corresponde:', passwordMatch ? 'Sim' : 'Não');
+      
+      if (!passwordMatch) {
+        console.log('Senha incorreta');
+        const error = new Error("Credenciais inválidas") as CustomError;
+        error.statusCode = 401;
+        return next(error);
+      }
+
+      const token = jwt.sign({ patientId: patient.id }, jwtSecret, { expiresIn: "1h" });
+      console.log('Token gerado com sucesso');
+      
       res.status(200).json({
         token,
         patientId: patient.id,
         message: "Login realizado com sucesso",
-       });
+      });
     } catch (error) {
       console.error("Erro ao fazer login do paciente:", error);
       return next(error);

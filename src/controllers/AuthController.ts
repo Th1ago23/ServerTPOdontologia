@@ -224,18 +224,20 @@ class AuthController {
       const admin = await prisma.user.findUnique({ where: { email } });
       if (admin) {
         console.log('Usuário encontrado como admin');
-        return res.status(200).json({ type: 'admin' });
+        res.status(200).json({ type: 'admin' });
+        return;
       }
 
       // Verifica se é um paciente
       const patient = await prisma.patient.findUnique({ where: { email } });
       if (patient) {
         console.log('Usuário encontrado como paciente');
-        return res.status(200).json({ type: 'patient' });
+        res.status(200).json({ type: 'patient' });
+        return;
       }
 
       console.log('Usuário não encontrado');
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      res.status(404).json({ error: 'Usuário não encontrado' });
     } catch (error) {
       console.error('Erro ao verificar tipo de usuário:', error);
       res.status(500).json({ error: 'Erro ao verificar tipo de usuário' });

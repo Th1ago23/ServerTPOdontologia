@@ -243,5 +243,59 @@ class AuthController {
       res.status(500).json({ error: 'Erro ao verificar tipo de usuário' });
     }
   }
+
+  async unifiedLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, password } = req.body;
+      console.log('Tentativa de login unificado:', { email });
+
+      // Tenta como paciente primeiro
+      const patient = await prisma.patient.findUnique({ where: { email } });
+      if (patient) {
+        console.log('Paciente encontrado, verificando senha...');
+        const passwordMatch = await bcrypt.compare(password, patient.password);
+        if (passwordMatch) {
+          console.log('Senha do paciente correta, gerando token...');
+          const token = jwt.sign({ patientId: patient.id }, jwtSecret, { expiresIn: "1h" });
+          res.status(200).json({
+            token,
+            patientId: patient.id,
+            type: 'patient',
+            message: "Login realizado com sucesso"
+          });
+          return;
+        }
+      }
+
+      // Se não for paciente ou senha incorreta, tenta como admin
+      const admin = await prisma.user.findUnique({ where: { email } });
+      if (admin) {
+        console.log('Admin encontrado, verificando senha...');
+        const passwordMatch = await bcrypt.compare(password, admin.password);
+        if (passwordMatch) {
+          console.log('Senha do admin correta, gerando token...');
+          const token = jwt.sign({ userId: admin.id, isAdmin: admin.isAdmin }, jwtSecret, { expiresIn: "1h" });
+          res.status(200).json({
+            token,
+            user: {
+              id: admin.id,
+              email: admin.email,
+              isAdmin: admin.isAdmin
+            },
+            type: 'admin',
+            message: "Login realizado com sucesso"
+          });
+          return;
+        }
+      }
+
+      // Se chegou aqui, não encontrou usuário ou senha incorreta
+      console.log('Credenciais inválidas');
+      res.status(401).json({ error: "Credenciais inválidas" });
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+      res.status(500).json({ error: "Erro ao fazer login" });
+    }
+  }
 }
 export default new AuthController();

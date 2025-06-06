@@ -214,5 +214,32 @@ class AuthController {
       return next(error); // Passa o erro para o middleware de tratamento de erros
     }
   }
+
+  async checkUserType(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+      console.log('Verificando tipo de usuário:', { email });
+
+      // Verifica se é um admin
+      const admin = await prisma.user.findUnique({ where: { email } });
+      if (admin) {
+        console.log('Usuário encontrado como admin');
+        return res.status(200).json({ type: 'admin' });
+      }
+
+      // Verifica se é um paciente
+      const patient = await prisma.patient.findUnique({ where: { email } });
+      if (patient) {
+        console.log('Usuário encontrado como paciente');
+        return res.status(200).json({ type: 'patient' });
+      }
+
+      console.log('Usuário não encontrado');
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    } catch (error) {
+      console.error('Erro ao verificar tipo de usuário:', error);
+      res.status(500).json({ error: 'Erro ao verificar tipo de usuário' });
+    }
+  }
 }
 export default new AuthController();

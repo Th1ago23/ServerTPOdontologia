@@ -15,7 +15,7 @@ export const authenticateToken: RequestHandler = async (
   next: NextFunction
 ): Promise<void> => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const token = authHeader && authHeader.split(" ")[1] || req.cookies?.token;
 
   if (token == null) {
     res.status(401).json({ error: "Não autorizado" });

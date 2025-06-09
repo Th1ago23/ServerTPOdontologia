@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/authMiddleware";
+import { authenticateToken, authenticateAdmin } from "../middleware/authMiddleware";
 import AppointmentManagementController from "../controllers/AppointmentManagementController";
 
 const router = Router();
 
 // Middleware de autenticação para todas as rotas
-router.use(authenticateToken);
+router.use(authenticateToken, authenticateAdmin);
 
 // Rotas de gerenciamento de consultas
 router.get("/appointments", AppointmentManagementController.listAllAppointments);

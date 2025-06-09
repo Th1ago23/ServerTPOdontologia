@@ -4,10 +4,6 @@ import { clearDatabase, prisma, createTestUser, createTestPatient } from '../tes
 import { createVerificationCode } from '../services/verificationService';
 import bcrypt from 'bcryptjs';
 
-beforeAll(async () => {
-  await clearDatabase();
-});
-
 afterAll(async () => {
   await prisma.$disconnect();
 });
@@ -186,6 +182,38 @@ describe('Auth Controller', () => {
         .send({ code, isPatient: true, email: testPatient.email });
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('message', 'E-mail verificado com sucesso');
+    });
+  });
+
+  describe('Admin route access control', () => {
+    beforeAll(async () => {
+      // Limpa usuários e pacientes de teste
+      await prisma.user.deleteMany({ where: { email: 'test@example.com' } });
+      await prisma.patient.deleteMany({ where: { email: 'patient@example.com' } });
+      await createTestUser();
+      await createTestPatient();
+    });
+
+    it('should allow admin to access admin panel route', async () => {
+      const adminLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'testpassword' });
+      const adminCookies = Array.isArray(adminLogin.headers['set-cookie']) ? adminLogin.headers['set-cookie'] : [adminLogin.headers['set-cookie']];
+      const response = await request(app)
+        .get('/api/admin/appointments')
+        .set('Cookie', adminCookies);
+      expect(response.status).toBe(200);
+    });
+
+    it('should forbid patient from accessing admin panel route', async () => {
+      const patientLogin = await request(app)
+        .post('/api/auth-patient/login')
+        .send({ email: 'patient@example.com', password: 'testpassword' });
+      const patientCookies = Array.isArray(patientLogin.headers['set-cookie']) ? patientLogin.headers['set-cookie'] : [patientLogin.headers['set-cookie']];
+      const response = await request(app)
+        .get('/api/admin/appointments')
+        .set('Cookie', patientCookies);
+      expect(response.status).toBe(403);
     });
   });
 }); 

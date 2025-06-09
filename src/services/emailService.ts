@@ -36,7 +36,14 @@ interface EmailData {
   html?: string;
 }
 
+const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';
+
 export const sendEmail = async (data: EmailData) => {
+  if (!EMAIL_ENABLED) {
+    console.log('Simulação de envio de e-mail:', data);
+    return { success: true, messageId: 'simulado' };
+  }
+
   try {
     // Verificar se o email de destino está configurado
     if (!data.to) {

@@ -75,12 +75,16 @@ const corsOptions: CorsOptions = {
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
+      console.log('Origin bloqueada:', origin);
       return callback(new Error('Not allowed by CORS'), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Cookie'],
+  exposedHeaders: ['Set-Cookie'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 // Middlewares de segurança

@@ -1,12 +1,50 @@
 import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
 import routes from './routes';
 import dotenv from 'dotenv';
 import cors, { CorsOptions } from 'cors';
+import { PrismaClient } from '@prisma/client';
+import authRoutes from './routes/authRoutes';
+import patientRoutes from './routes/patientRoutes';
+import appointmentRoutes from './routes/appointmentRoutes';
+import contactRoutes from './routes/contactRoutes';
+import authPatientRoutes from './routes/authPatientRoutes';
+import { authMiddleware } from './middleware/auth';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import winston from 'winston';
 
 dotenv.config();
 
 const app = express();
+const prisma = new PrismaClient();
+
+// Configuração do logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' })
+  ]
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple()
+  }));
+}
+
+// Configuração do rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // limite de 100 requisições por IP
+  message: 'Muitas requisições deste IP, tente novamente mais tarde'
+});
 
 const allowedOrigins = [
   'https://www.tatianepeixotoodonto.live',
@@ -45,14 +83,27 @@ const corsOptions: CorsOptions = {
   credentials: true
 };
 
+// Middlewares de segurança
+app.use(helmet()); // Adiciona headers de segurança
+app.use(limiter); // Rate limiting
+app.use(cors(corsOptions));
+app.use(bodyParser.json());
+app.use(cookieParser());
+
+// Middleware de logging
+app.use((req: Request, res: Response, next: NextFunction) => {
+  logger.info(`${req.method} ${req.url}`, {
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
+  next();
+});
+
 // Middleware para corrigir URLs com duplo slash
 app.use((req, res, next) => {
   req.url = req.url.replace(/\/+/g, '/');
   next();
 });
-
-app.use(cors(corsOptions));
-app.use(bodyParser.json());
 
 // Rota raiz
 app.get('/', (req, res) => {
@@ -61,6 +112,11 @@ app.get('/', (req, res) => {
 
 // Rotas da API
 app.use('/api', routes);
+app.use('/api/auth', authRoutes);
+app.use('/api/patients', authMiddleware, patientRoutes);
+app.use('/api/appointments', authMiddleware, appointmentRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/auth-patient', authPatientRoutes);
 
 // Middleware de erro
 interface AppError extends Error {
@@ -68,10 +124,19 @@ interface AppError extends Error {
 }
 
 app.use((err: AppError, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
+  logger.error('Erro na aplicação:', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Erro interno do servidor';
+  const message = process.env.NODE_ENV === 'production' 
+    ? 'Erro interno do servidor' 
+    : err.message;
+
   res.status(statusCode).json({ error: message });
 });
 
-export default app;
+export { app, prisma, logger };

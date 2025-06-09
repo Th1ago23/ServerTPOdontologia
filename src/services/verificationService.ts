@@ -32,12 +32,12 @@ export const sendVerificationEmail = async (email: string, code: string) => {
   });
 };
 
-export const createVerificationCode = async (email: string, isAdmin: boolean = false) => {
+export const createVerificationCode = async (email: string, isPatient: boolean = false) => {
   const code = generateVerificationCode();
   const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
-  if (isAdmin) {
-    await prisma.user.update({
+  if (isPatient) {
+    await prisma.patient.update({
       where: { email },
       data: {
         emailVerificationCode: code,
@@ -45,7 +45,7 @@ export const createVerificationCode = async (email: string, isAdmin: boolean = f
       },
     });
   } else {
-    await prisma.patient.update({
+    await prisma.user.update({
       where: { email },
       data: {
         emailVerificationCode: code,
@@ -58,35 +58,10 @@ export const createVerificationCode = async (email: string, isAdmin: boolean = f
   return code;
 };
 
-export const verifyCode = async (email: string, code: string, isAdmin: boolean = false) => {
+export const verifyCode = async (email: string, code: string, isPatient: boolean = false) => {
   const now = new Date();
 
-  if (isAdmin) {
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user || !user.emailVerificationCode || !user.emailVerificationExpires) {
-      throw new Error('Código de verificação não encontrado');
-    }
-
-    if (user.emailVerificationCode !== code) {
-      throw new Error('Código de verificação inválido');
-    }
-
-    if (user.emailVerificationExpires < now) {
-      throw new Error('Código de verificação expirado');
-    }
-
-    await prisma.user.update({
-      where: { email },
-      data: {
-        isEmailVerified: true,
-        emailVerificationCode: null,
-        emailVerificationExpires: null,
-      },
-    });
-  } else {
+  if (isPatient) {
     const patient = await prisma.patient.findUnique({
       where: { email },
     });
@@ -104,6 +79,31 @@ export const verifyCode = async (email: string, code: string, isAdmin: boolean =
     }
 
     await prisma.patient.update({
+      where: { email },
+      data: {
+        isEmailVerified: true,
+        emailVerificationCode: null,
+        emailVerificationExpires: null,
+      },
+    });
+  } else {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user || !user.emailVerificationCode || !user.emailVerificationExpires) {
+      throw new Error('Código de verificação não encontrado');
+    }
+
+    if (user.emailVerificationCode !== code) {
+      throw new Error('Código de verificação inválido');
+    }
+
+    if (user.emailVerificationExpires < now) {
+      throw new Error('Código de verificação expirado');
+    }
+
+    await prisma.user.update({
       where: { email },
       data: {
         isEmailVerified: true,

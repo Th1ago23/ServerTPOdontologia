@@ -53,10 +53,8 @@ class AuthController {
 
   async verifyEmail(req: Request, res: Response): Promise<void> {
     try {
-      const { email, code, isAdmin } = req.body;
-      
-      await verifyCode(email, code, isAdmin);
-      
+      const { email, code, isPatient } = req.body;
+      await verifyCode(email, code, isPatient);
       res.status(200).json({ 
         message: "E-mail verificado com sucesso" 
       });
@@ -120,14 +118,15 @@ class AuthController {
       const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, jwtSecret, { expiresIn: "1h" });
       console.log('Token gerado com sucesso');
       
-      res.status(200).json({ 
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          isAdmin: user.isAdmin
-        }
+      // Configurar o cookie HTTP-only
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
+      
+      res.status(200).json({ token, user: { id: user.id, email: user.email, isAdmin: user.isAdmin } });
     } catch (error) {
       console.error("Erro ao fazer login:", error);
       res.status(500).json({ error: "Erro ao fazer login" });
@@ -231,11 +230,15 @@ class AuthController {
       const token = jwt.sign({ patientId: patient.id, isAdmin: false }, jwtSecret, { expiresIn: "1h" });
       console.log('Token gerado com sucesso');
       
-      res.status(200).json({
-        token,
-        patientId: patient.id,
-        message: "Login realizado com sucesso",
+      // Configurar o cookie HTTP-only
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
+      
+      res.status(200).json({ token, patientId: patient.id, message: "Login realizado com sucesso" });
     } catch (error) {
       console.error("Erro ao fazer login do paciente:", error);
       return next(error);
@@ -306,6 +309,20 @@ class AuthController {
     } catch (error) {
       console.error('Erro ao verificar tipo de usuário:', error);
       res.status(500).json({ error: 'Erro ao verificar tipo de usuário' });
+    }
+  }
+
+  async logout(req: Request, res: Response) {
+    try {
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+      res.json({ message: 'Logout realizado com sucesso' });
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      res.status(500).json({ error: 'Erro ao fazer logout' });
     }
   }
 }

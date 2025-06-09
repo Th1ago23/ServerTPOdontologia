@@ -20,6 +20,15 @@ console.log('Configurações SMTP:', {
   contactEmail: process.env.CONTACT_EMAIL,
 });
 
+// Verificar se o transporter foi criado corretamente
+transporter.verify(function(error, success) {
+  if (error) {
+    console.error('Erro na configuração do SMTP:', error);
+  } else {
+    console.log('Servidor SMTP está pronto para enviar emails');
+  }
+});
+
 interface EmailData {
   to: string;
   subject: string;

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { createVerificationCode, verifyCode } from "../services/verificationService";
 
 const prisma = new PrismaClient();
 const saltRounds = 10;
@@ -27,11 +28,60 @@ class AuthController {
         return;
       }
       const hashedPassword = await bcrypt.hash(password, saltRounds);
-      const newUser = await prisma.user.create({ data: { email, password: hashedPassword, isAdmin:true } });
-      res.status(201).json({ message: "Usuário registrado com sucesso", userId: newUser.id, email: newUser.email });
+      const newUser = await prisma.user.create({ 
+        data: { 
+          email, 
+          password: hashedPassword, 
+          isAdmin: true,
+          isEmailVerified: false
+        } 
+      });
+
+      // Enviar código de verificação
+      await createVerificationCode(email, true);
+
+      res.status(201).json({ 
+        message: "Usuário registrado com sucesso. Por favor, verifique seu e-mail.", 
+        userId: newUser.id, 
+        email: newUser.email 
+      });
     } catch (error) {
       console.error("Erro ao registrar usuário:", error);
       res.status(500).json({ error: "Erro ao registrar usuário" });
+    }
+  }
+
+  async verifyEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, code, isAdmin } = req.body;
+      
+      await verifyCode(email, code, isAdmin);
+      
+      res.status(200).json({ 
+        message: "E-mail verificado com sucesso" 
+      });
+    } catch (error) {
+      console.error("Erro ao verificar e-mail:", error);
+      res.status(400).json({ 
+        error: error instanceof Error ? error.message : "Erro ao verificar e-mail" 
+      });
+    }
+  }
+
+  async resendVerificationCode(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, isAdmin } = req.body;
+      
+      await createVerificationCode(email, isAdmin);
+      
+      res.status(200).json({ 
+        message: "Novo código de verificação enviado com sucesso" 
+      });
+    } catch (error) {
+      console.error("Erro ao reenviar código:", error);
+      res.status(500).json({ 
+        error: "Erro ao reenviar código de verificação" 
+      });
     }
   }
 
@@ -46,6 +96,15 @@ class AuthController {
       if (!user) {
         console.log('Usuário não encontrado');
         res.status(401).json({ error: "Credenciais inválidas" });
+        return;
+      }
+
+      if (!user.isEmailVerified) {
+        console.log('E-mail não verificado');
+        res.status(401).json({ 
+          error: "E-mail não verificado",
+          needsVerification: true
+        });
         return;
       }
 
@@ -118,18 +177,15 @@ class AuthController {
           zipCode,
           country,
           password: hashedPassword,
+          isEmailVerified: false
         },
       });
+
+      // Enviar código de verificação
+      await createVerificationCode(email, false);
   
-      // Geração do token JWT
-      const token = jwt.sign({ id: patient.id, email: patient.email, isAdmin: false }, process.env.JWT_SECRET as string, {
-        expiresIn: "1d",
-      });
-  
-      // Retorna já logado
       res.status(201).json({
-        message: "Paciente registrado com sucesso",
-        token,
+        message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",
         patientId: patient.id,
       });
     } catch (error) {
@@ -151,6 +207,15 @@ class AuthController {
         const error = new Error("Credenciais inválidas") as CustomError;
         error.statusCode = 401;
         return next(error);
+      }
+
+      if (!patient.isEmailVerified) {
+        console.log('E-mail não verificado');
+        res.status(401).json({ 
+          error: "E-mail não verificado",
+          needsVerification: true
+        });
+        return;
       }
 
       const passwordMatch = await bcrypt.compare(password, patient.password);

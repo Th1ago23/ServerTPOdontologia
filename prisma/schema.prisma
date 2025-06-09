@@ -23,6 +23,9 @@ model Patient {
   state               String
   zipCode             String
   country             String
+  isEmailVerified     Boolean             @default(false)
+  emailVerificationCode String?
+  emailVerificationExpires DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   appointments        Appointment[]
@@ -30,12 +33,15 @@ model Patient {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  isAdmin   Boolean  @default(false) // Indica se o usuário é administrador
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    Int      @id @default(autoincrement())
+  email                 String   @unique
+  password              String
+  isAdmin               Boolean  @default(false) // Indica se o usuário é administrador
+  isEmailVerified       Boolean  @default(false)
+  emailVerificationCode String?
+  emailVerificationExpires DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model Doctor {

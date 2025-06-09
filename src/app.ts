@@ -92,16 +92,6 @@ const corsOptions: CorsOptions = {
   optionsSuccessStatus: 204
 };
 
-// Middlewares de segurança
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "unsafe-none" }
-})); // Adiciona headers de segurança
-app.use(limiter); // Rate limiting
-app.use(cors(corsOptions));
-app.use(bodyParser.json());
-app.use(cookieParser());
-
 // Middleware para corrigir URLs com duplo slash
 app.use((req, res, next) => {
   if (req.url.includes('//')) {
@@ -110,12 +100,24 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middlewares de segurança
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" }
+}));
+
+app.use(limiter);
+app.use(cors(corsOptions));
+app.use(bodyParser.json());
+app.use(cookieParser());
+
 // Middleware de logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   logger.info(`${req.method} ${req.url}`, {
     ip: req.ip,
     userAgent: req.get('user-agent'),
-    origin: req.get('origin')
+    origin: req.get('origin'),
+    headers: req.headers
   });
   next();
 });

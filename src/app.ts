@@ -72,11 +72,16 @@ const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Permite requisições sem origin (ex: ferramentas internas, mobile, etc)
     if (!origin) return callback(null, true);
+    
+    // Log para debug
+    console.log('Origin recebida:', origin);
+    console.log('Origins permitidas:', allowedOrigins);
+    
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      callback(null, true);
     } else {
       console.log('Origin bloqueada:', origin);
-      return callback(new Error('Not allowed by CORS'), false);
+      callback(new Error('Not allowed by CORS'), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -88,24 +93,30 @@ const corsOptions: CorsOptions = {
 };
 
 // Middlewares de segurança
-app.use(helmet()); // Adiciona headers de segurança
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" }
+})); // Adiciona headers de segurança
 app.use(limiter); // Rate limiting
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
+// Middleware para corrigir URLs com duplo slash
+app.use((req, res, next) => {
+  if (req.url.includes('//')) {
+    req.url = req.url.replace(/\/+/g, '/');
+  }
+  next();
+});
+
 // Middleware de logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   logger.info(`${req.method} ${req.url}`, {
     ip: req.ip,
-    userAgent: req.get('user-agent')
+    userAgent: req.get('user-agent'),
+    origin: req.get('origin')
   });
-  next();
-});
-
-// Middleware para corrigir URLs com duplo slash
-app.use((req, res, next) => {
-  req.url = req.url.replace(/\/+/g, '/');
   next();
 });
 

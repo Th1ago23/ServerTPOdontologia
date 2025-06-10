@@ -44,16 +44,4 @@ export const createTestPatient = async () => {
       isEmailVerified: true
     },
   });
-};
-
-export const createTestDoctor = async () => {
-  const hashedPassword = await bcrypt.hash('testpassword', 10);
-  return await prisma.doctor.create({
-    data: {
-      name: 'Test Doctor',
-      email: 'doctor@example.com',
-      password: hashedPassword,
-      specialty: 'Test Specialty'
-    },
-  });
 }; 

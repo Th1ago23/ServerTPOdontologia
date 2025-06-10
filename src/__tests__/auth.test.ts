@@ -1,10 +1,18 @@
 import request from 'supertest';
 import { app } from '../app';
-import { clearDatabase, prisma, createTestUser, createTestPatient } from '../tests/setup';
+import { clearDatabase, prisma, createTestUser, createTestPatient } from '../tests/utils';
 import { createVerificationCode } from '../services/verificationService';
 import bcrypt from 'bcryptjs';
 
+// Hooks globais
+beforeAll(async () => {
+  await prisma.patient.deleteMany();
+  await prisma.user.deleteMany();
+});
+
 afterAll(async () => {
+  await prisma.patient.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.$disconnect();
 });
 

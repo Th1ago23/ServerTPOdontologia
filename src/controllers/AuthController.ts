@@ -159,6 +159,10 @@ class AuthController {
         return next(error);
       }
   
+      // Gerar código de verificação
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hora
+
       // Criação do paciente
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       const patient = await prisma.patient.create({
@@ -176,12 +180,14 @@ class AuthController {
           zipCode,
           country,
           password: hashedPassword,
-          isEmailVerified: false
+          isEmailVerified: false,
+          emailVerificationCode: code,
+          emailVerificationExpires: expiresAt
         },
       });
 
-      // Enviar código de verificação
-      await createVerificationCode(email, false);
+      // Enviar email de verificação
+      await sendVerificationEmail(email, code);
   
       res.status(201).json({
         message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",

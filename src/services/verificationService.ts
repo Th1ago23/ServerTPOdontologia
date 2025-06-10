@@ -37,6 +37,16 @@ export const createVerificationCode = async (email: string, isPatient: boolean =
   const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
   if (isPatient) {
+    // Primeiro verifica se o paciente existe
+    const patient = await prisma.patient.findUnique({
+      where: { email },
+    });
+
+    if (!patient) {
+      throw new Error('Paciente não encontrado');
+    }
+
+    // Se existir, atualiza o código
     await prisma.patient.update({
       where: { email },
       data: {
@@ -44,7 +54,19 @@ export const createVerificationCode = async (email: string, isPatient: boolean =
         emailVerificationExpires: expiresAt,
       },
     });
+
+    await sendVerificationEmail(email, code);
   } else {
+    // Primeiro verifica se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    // Se existir, atualiza o código
     await prisma.user.update({
       where: { email },
       data: {
@@ -52,9 +74,10 @@ export const createVerificationCode = async (email: string, isPatient: boolean =
         emailVerificationExpires: expiresAt,
       },
     });
+
+    await sendVerificationEmail(email, code);
   }
 
-  await sendVerificationEmail(email, code);
   return code;
 };
 

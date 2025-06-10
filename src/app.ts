@@ -70,15 +70,18 @@ const allowedOrigins = [
 // Configuração do CORS
 const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Log para debug
+    console.log('=== CORS Debug ===');
+    console.log('Origin recebida:', origin);
+    console.log('Origins permitidas:', allowedOrigins);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+    
     // Permite requisições sem origin (ex: ferramentas internas, mobile, etc)
     if (!origin) {
       console.log('Requisição sem origin - permitindo');
       return callback(null, true);
     }
-    
-    // Log para debug
-    console.log('Origin recebida:', origin);
-    console.log('Origins permitidas:', allowedOrigins);
     
     // Verifica se a origin está na lista de permitidas
     if (allowedOrigins.includes(origin)) {
@@ -90,6 +93,7 @@ const corsOptions: CorsOptions = {
       if (process.env.NODE_ENV === 'production') {
         callback(new Error(`Origin ${origin} não permitida por CORS`), false);
       } else {
+        console.log('Ambiente de desenvolvimento - permitindo origin');
         callback(null, true); // Em desenvolvimento, permite todas as origins
       }
     }
@@ -105,9 +109,15 @@ const corsOptions: CorsOptions = {
 
 // Middleware para corrigir URLs com duplo slash - DEVE vir antes do CORS
 app.use((req, res, next) => {
-  if (req.url.includes('//')) {
-    req.url = req.url.replace(/\/+/g, '/');
-  }
+  // Remove múltiplos slashes consecutivos
+  req.url = req.url.replace(/\/+/g, '/');
+  
+  // Log para debug
+  console.log('=== URL Debug ===');
+  console.log('URL original:', req.originalUrl);
+  console.log('URL corrigida:', req.url);
+  console.log('Headers:', req.headers);
+  
   next();
 });
 

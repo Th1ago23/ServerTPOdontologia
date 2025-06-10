@@ -71,17 +71,27 @@ const allowedOrigins = [
 const corsOptions: CorsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Permite requisições sem origin (ex: ferramentas internas, mobile, etc)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('Requisição sem origin - permitindo');
+      return callback(null, true);
+    }
     
     // Log para debug
     console.log('Origin recebida:', origin);
     console.log('Origins permitidas:', allowedOrigins);
     
+    // Verifica se a origin está na lista de permitidas
     if (allowedOrigins.includes(origin)) {
+      console.log('Origin permitida:', origin);
       callback(null, true);
     } else {
       console.log('Origin bloqueada:', origin);
-      callback(new Error('Not allowed by CORS'), false);
+      // Em produção, retorna erro mais específico
+      if (process.env.NODE_ENV === 'production') {
+        callback(new Error(`Origin ${origin} não permitida por CORS`), false);
+      } else {
+        callback(null, true); // Em desenvolvimento, permite todas as origins
+      }
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -89,7 +99,8 @@ const corsOptions: CorsOptions = {
   exposedHeaders: ['Set-Cookie'],
   credentials: true,
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
+  maxAge: 86400 // Cache das respostas preflight por 24 horas
 };
 
 // Middleware para corrigir URLs com duplo slash - DEVE vir antes do CORS

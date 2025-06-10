@@ -135,17 +135,40 @@ app.use(cookieParser());
 
 // Middleware de logging
 app.use((req: Request, res: Response, next: NextFunction) => {
-  logger.info(`${req.method} ${req.url}`, {
+  logger.info('=== Nova Requisição ===', {
+    method: req.method,
+    url: req.url,
+    originalUrl: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('user-agent'),
     origin: req.get('origin'),
-    headers: req.headers
+    referer: req.get('referer'),
+    headers: req.headers,
+    body: req.body,
+    cookies: req.cookies
   });
+  next();
+});
+
+// Middleware para debug de CORS
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log('=== CORS Debug Detalhado ===');
+  console.log('Origin:', req.get('origin'));
+  console.log('Referer:', req.get('referer'));
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', req.headers);
+  console.log('Cookies:', req.cookies);
   next();
 });
 
 // Rota raiz
 app.get('/', (req, res) => {
+  logger.info('Acesso à rota raiz', {
+    ip: req.ip,
+    origin: req.get('origin'),
+    headers: req.headers
+  });
   res.json({ message: 'API TPOdontologia está funcionando!' });
 });
 

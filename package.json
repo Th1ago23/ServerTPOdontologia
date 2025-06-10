@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "npm install typescript && tsc",
     "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -14,7 +14,7 @@
     "seed": "ts-node prisma/seed.ts",
     "migrate": "npx prisma migrate deploy",
     "deploy": "npx prisma migrate deploy && npm run seed",
-    "heroku-postbuild": "npm run build",
+    "heroku-postbuild": "npm install typescript && npm run build",
     "prisma:generate": "prisma generate"
   },
   "prisma": {
@@ -46,6 +46,7 @@
     "prisma": "^5.22.0",
     "react-hot-toast": "^2.5.2",
     "react-native-mask-text": "^0.14.2",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.2",
     "winston": "^3.11.0"
@@ -66,9 +67,7 @@
     "jest": "^29.7.0",
     "prisma": "^5.10.2",
     "supertest": "^6.3.4",
-    "ts-jest": "^29.3.4",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "ts-jest": "^29.3.4"
   },
   "engines": {
     "node": "20.x",

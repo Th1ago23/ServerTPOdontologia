@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "./node_modules/.bin/tsc",
     "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -35,6 +35,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.12",
+    "typescript": "^5.4.2",
     "winston": "^3.11.0"
   },
   "devDependencies": {
@@ -57,8 +58,7 @@
     "supertest": "^6.3.4",
     "ts-jest": "^29.3.4",
     "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.4.2"
+    "ts-node-dev": "^2.0.0"
   },
   "engines": {
     "node": "20.x",

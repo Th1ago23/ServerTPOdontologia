@@ -92,7 +92,7 @@ const corsOptions: CorsOptions = {
   optionsSuccessStatus: 204
 };
 
-// Middleware para corrigir URLs com duplo slash
+// Middleware para corrigir URLs com duplo slash - DEVE vir antes do CORS
 app.use((req, res, next) => {
   if (req.url.includes('//')) {
     req.url = req.url.replace(/\/+/g, '/');
@@ -105,7 +105,6 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "unsafe-none" }
 }));
-
 app.use(limiter);
 app.use(cors(corsOptions));
 app.use(bodyParser.json());

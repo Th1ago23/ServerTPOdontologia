@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { createVerificationCode, verifyCode } from "../services/verificationService";
+import { createVerificationCode, verifyCode, generateVerificationCode, sendVerificationEmail } from "../services/verificationService";
 
 const prisma = new PrismaClient();
 const saltRounds = 10;

@@ -96,4 +96,24 @@ export const verifyEmail = async (email: string, code: string): Promise<{ succes
     console.error("Erro ao verificar e-mail:", error);
     throw new Error("Erro ao verificar e-mail");
   }
+};
+
+export const sendPasswordResetEmail = async (email: string, code: string): Promise<void> => {
+  try {
+    const { sendEmail } = await import('./emailService');
+    await sendEmail({
+      to: email,
+      subject: 'Redefinição de Senha - TP Odontologia',
+      text: `Seu código de redefinição de senha é: ${code}. Este código expira em 1 hora.`,
+      html: `
+        <h2>Redefinição de Senha</h2>
+        <p>Seu código de redefinição de senha é: <strong>${code}</strong></p>
+        <p>Este código expira em 1 hora.</p>
+        <p>Se você não solicitou a redefinição de senha, ignore este e-mail.</p>
+      `
+    });
+  } catch (error) {
+    console.error('Erro ao enviar e-mail de redefinição de senha:', error);
+    throw new Error('Erro ao enviar e-mail de redefinição de senha');
+  }
 }; 

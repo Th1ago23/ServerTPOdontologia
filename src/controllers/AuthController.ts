@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { generateVerificationCode, sendVerificationEmail, verifyEmail } from "../services/verificationService";
+import { generateVerificationCode, sendVerificationEmail, verifyEmail, sendPasswordResetEmail } from "../services/verificationService";
 
 const prisma = new PrismaClient();
 const saltRounds = 10;
@@ -38,7 +38,15 @@ class AuthController {
       });
 
       // Enviar código de verificação
-      await generateVerificationCode(email, true);
+      const code = generateVerificationCode();
+      await prisma.user.update({
+        where: { email },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: new Date(Date.now() + 3600000)
+        }
+      });
+      await sendVerificationEmail(email, code);
 
       res.status(201).json({ 
         message: "Usuário registrado com sucesso. Por favor, verifique seu e-mail.", 
@@ -87,7 +95,25 @@ class AuthController {
     try {
       const { email, isAdmin } = req.body;
       
-      await generateVerificationCode(email, isAdmin);
+      const code = generateVerificationCode();
+      if (isAdmin) {
+        await prisma.user.update({
+          where: { email },
+          data: {
+            emailVerificationCode: code,
+            emailVerificationExpires: new Date(Date.now() + 3600000)
+          }
+        });
+      } else {
+        await prisma.patient.update({
+          where: { email },
+          data: {
+            emailVerificationCode: code,
+            emailVerificationExpires: new Date(Date.now() + 3600000)
+          }
+        });
+      }
+      await sendVerificationEmail(email, code);
       
       res.status(200).json({ 
         message: "Novo código de verificação enviado com sucesso" 

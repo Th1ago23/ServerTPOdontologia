@@ -52,8 +52,14 @@ const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true' && transporter !== nu
 
 export const sendEmail = async (data: EmailData) => {
   if (!EMAIL_ENABLED) {
-    console.log('Simulação de envio de e-mail:', data);
-    return { success: true, messageId: 'simulado' };
+    console.log('Email desabilitado ou SMTP não configurado. Configurações necessárias:');
+    console.log('- SMTP_HOST');
+    console.log('- SMTP_PORT');
+    console.log('- SMTP_USER');
+    console.log('- SMTP_PASS');
+    console.log('- SMTP_FROM');
+    console.log('- EMAIL_ENABLED=true');
+    throw new Error('Serviço de email não está configurado corretamente');
   }
 
   try {
@@ -85,8 +91,7 @@ export const sendEmail = async (data: EmailData) => {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Erro detalhado ao enviar email:', error);
-    // Retorna sucesso simulado em caso de erro
-    return { success: true, messageId: 'simulado' };
+    throw error; // Propaga o erro em vez de retornar sucesso simulado
   }
 };
 

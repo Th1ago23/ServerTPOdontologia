@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { createVerificationCode, verifyCode, generateVerificationCode, sendVerificationEmail } from "../services/verificationService";
+import { createVerificationCode, verifyCode, generateVerificationCode, sendVerificationEmail, verifyEmail } from "../services/verificationService";
 
 const prisma = new PrismaClient();
 const saltRounds = 10;
@@ -51,18 +51,35 @@ class AuthController {
     }
   }
 
-  async verifyEmail(req: Request, res: Response): Promise<void> {
+  async verifyEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, code, isPatient } = req.body;
-      await verifyCode(email, code, isPatient);
-      res.status(200).json({ 
-        message: "E-mail verificado com sucesso" 
-      });
+      const { email, code } = req.body;
+
+      if (!email || !code) {
+        const error = new Error("E-mail e código são obrigatórios") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      const result = await verifyEmail(email, code);
+
+      if (!result.success) {
+        const error = new Error(result.message) as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      res.status(200).json({ message: result.message });
     } catch (error) {
       console.error("Erro ao verificar e-mail:", error);
-      res.status(400).json({ 
-        error: error instanceof Error ? error.message : "Erro ao verificar e-mail" 
-      });
+      if (error instanceof Error) {
+        const customError = error as CustomError;
+        res.status(customError.statusCode || 500).json({ 
+          error: customError.message || "Erro ao verificar e-mail" 
+        });
+      } else {
+        res.status(500).json({ error: "Erro ao verificar e-mail" });
+      }
     }
   }
 
@@ -192,13 +209,15 @@ class AuthController {
         error.statusCode = 400;
         return next(error);
       }
-  
+
       // Gerar código de verificação
       const code = generateVerificationCode();
       const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
       // Criação do paciente
       const hashedPassword = await bcrypt.hash(password, saltRounds);
+      
+      // Primeiro criar o paciente
       const patient = await prisma.patient.create({
         data: {
           name,
@@ -218,6 +237,15 @@ class AuthController {
           emailVerificationCode: code,
           emailVerificationExpires: expiresAt
         },
+      });
+
+      // Depois atualizar com o código de verificação
+      await prisma.patient.update({
+        where: { id: patient.id },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: expiresAt
+        }
       });
 
       try {

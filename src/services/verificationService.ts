@@ -81,60 +81,68 @@ export const createVerificationCode = async (email: string, isPatient: boolean =
   return code;
 };
 
-export const verifyCode = async (email: string, code: string, isPatient: boolean = false) => {
-  const now = new Date();
-
-  if (isPatient) {
+export const verifyEmail = async (email: string, code: string): Promise<{ success: boolean; message: string }> => {
+  try {
     const patient = await prisma.patient.findUnique({
       where: { email },
+      select: {
+        id: true,
+        emailVerificationCode: true,
+        emailVerificationExpires: true,
+        isEmailVerified: true
+      }
     });
 
-    if (!patient || !patient.emailVerificationCode || !patient.emailVerificationExpires) {
-      throw new Error('Código de verificação não encontrado');
+    if (!patient) {
+      return {
+        success: false,
+        message: "Paciente não encontrado"
+      };
+    }
+
+    if (patient.isEmailVerified) {
+      return {
+        success: false,
+        message: "E-mail já verificado"
+      };
+    }
+
+    if (!patient.emailVerificationCode) {
+      return {
+        success: false,
+        message: "Código de verificação não encontrado. Por favor, solicite um novo código."
+      };
     }
 
     if (patient.emailVerificationCode !== code) {
-      throw new Error('Código de verificação inválido');
+      return {
+        success: false,
+        message: "Código de verificação inválido"
+      };
     }
 
-    if (patient.emailVerificationExpires < now) {
-      throw new Error('Código de verificação expirado');
+    if (patient.emailVerificationExpires && patient.emailVerificationExpires < new Date()) {
+      return {
+        success: false,
+        message: "Código de verificação expirado. Por favor, solicite um novo código."
+      };
     }
 
     await prisma.patient.update({
-      where: { email },
+      where: { id: patient.id },
       data: {
         isEmailVerified: true,
         emailVerificationCode: null,
-        emailVerificationExpires: null,
-      },
-    });
-  } else {
-    const user = await prisma.user.findUnique({
-      where: { email },
+        emailVerificationExpires: null
+      }
     });
 
-    if (!user || !user.emailVerificationCode || !user.emailVerificationExpires) {
-      throw new Error('Código de verificação não encontrado');
-    }
-
-    if (user.emailVerificationCode !== code) {
-      throw new Error('Código de verificação inválido');
-    }
-
-    if (user.emailVerificationExpires < now) {
-      throw new Error('Código de verificação expirado');
-    }
-
-    await prisma.user.update({
-      where: { email },
-      data: {
-        isEmailVerified: true,
-        emailVerificationCode: null,
-        emailVerificationExpires: null,
-      },
-    });
+    return {
+      success: true,
+      message: "E-mail verificado com sucesso"
+    };
+  } catch (error) {
+    console.error("Erro ao verificar e-mail:", error);
+    throw new Error("Erro ao verificar e-mail");
   }
-
-  return true;
 }; 

@@ -136,8 +136,42 @@ class AuthController {
   async registerPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, email, cpf, phone, birthDate, address, city, state, zipCode, country, password, number, complement } = req.body;
+
+      // Validação dos campos obrigatórios
+      const requiredFields = ['name', 'email', 'cpf', 'phone', 'birthDate', 'address', 'city', 'state', 'zipCode', 'country', 'password', 'number'];
+      const missingFields = requiredFields.filter(field => !req.body[field]);
+      
+      if (missingFields.length > 0) {
+        const error = new Error(`Campos obrigatórios faltando: ${missingFields.join(', ')}`) as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Validação de formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        const error = new Error("Formato de email inválido") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Validação de CPF (apenas formato básico)
+      const cpfRegex = /^\d{11}$/;
+      if (!cpfRegex.test(cpf.replace(/\D/g, ""))) {
+        const error = new Error("CPF inválido") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Validação de telefone
+      const phoneRegex = /^\d{10,11}$/;
+      if (!phoneRegex.test(phone.replace(/\D/g, ""))) {
+        const error = new Error("Telefone inválido") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
   
-      // Verificações
+      // Verificações de duplicidade
       const existingPatientByEmail = await prisma.patient.findUnique({ where: { email } });
       if (existingPatientByEmail) {
         const error = new Error("Paciente com este e-mail já cadastrado") as CustomError;
@@ -174,11 +208,11 @@ class AuthController {
           birthDate: new Date(birthDate),
           address,
           number,
-          complement,
+          complement: complement || "",
           city,
           state,
           zipCode,
-          country,
+          country: country || "Brasil",
           password: hashedPassword,
           isEmailVerified: false,
           emailVerificationCode: code,
@@ -200,7 +234,14 @@ class AuthController {
       });
     } catch (error) {
       console.error("Erro ao registrar paciente:", error);
-      return next(error);
+      if (error instanceof Error) {
+        const customError = error as CustomError;
+        res.status(customError.statusCode || 500).json({ 
+          error: customError.message || "Erro ao registrar paciente" 
+        });
+      } else {
+        res.status(500).json({ error: "Erro ao registrar paciente" });
+      }
     }
   }
 
@@ -334,6 +375,22 @@ class AuthController {
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
       res.status(500).json({ error: 'Erro ao fazer logout' });
+    }
+  }
+
+  async sendTestEmail(req: Request, res: Response): Promise<void> {
+    try {
+      const { sendEmail } = await import('../services/emailService');
+      await sendEmail({
+        to: 'thiago.peixots@gmail.com',
+        subject: 'Teste de envio de e-mail - TP Odontologia',
+        text: 'Este é um e-mail de teste enviado pelo endpoint /test-email.',
+        html: '<h2>Teste de envio de e-mail</h2><p>Este é um e-mail de teste enviado pelo endpoint <b>/test-email</b>.</p>'
+      });
+      res.status(200).json({ message: 'E-mail de teste enviado com sucesso!' });
+    } catch (error) {
+      console.error('Erro ao enviar e-mail de teste:', error);
+      res.status(500).json({ error: 'Erro ao enviar e-mail de teste', details: error instanceof Error ? error.message : error });
     }
   }
 }

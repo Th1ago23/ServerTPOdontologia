@@ -16,4 +16,6 @@ router.get('/me', authenticateToken, AuthController.me); // Informações do usu
 router.post('/appointment-requests', authenticateToken, AppointmentRequestController.create); // Criar nova consulta
 router.get('/appointment-requests', authenticateToken, AppointmentRequestController.listPatientAppointments); // Listar consultas do paciente
 
+router.get('/test-email', AuthController.sendTestEmail);
+
 export default router;

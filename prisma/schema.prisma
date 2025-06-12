@@ -26,6 +26,8 @@ model Patient {
   isEmailVerified     Boolean             @default(false)
   emailVerificationCode String?
   emailVerificationExpires DateTime?
+  passwordResetCode     String?
+  passwordResetExpires  DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   appointments        Appointment[]

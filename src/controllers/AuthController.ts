@@ -38,7 +38,7 @@ class AuthController {
       });
 
       // Enviar código de verificação
-      await createVerificationCode(email, true);
+      await generateVerificationCode(email, true);
 
       res.status(201).json({ 
         message: "Usuário registrado com sucesso. Por favor, verifique seu e-mail.", 
@@ -87,7 +87,7 @@ class AuthController {
     try {
       const { email, isAdmin } = req.body;
       
-      await createVerificationCode(email, isAdmin);
+      await generateVerificationCode(email, isAdmin);
       
       res.status(200).json({ 
         message: "Novo código de verificação enviado com sucesso" 
@@ -419,6 +419,114 @@ class AuthController {
     } catch (error) {
       console.error('Erro ao enviar e-mail de teste:', error);
       res.status(500).json({ error: 'Erro ao enviar e-mail de teste', details: error instanceof Error ? error.message : error });
+    }
+  }
+
+  async requestPasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        const error = new Error("E-mail é obrigatório") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      const patient = await prisma.patient.findUnique({ where: { email } });
+      if (!patient) {
+        const error = new Error("Paciente não encontrado") as CustomError;
+        error.statusCode = 404;
+        return next(error);
+      }
+
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hora
+
+      await prisma.patient.update({
+        where: { email },
+        data: {
+          passwordResetCode: code,
+          passwordResetExpires: expiresAt,
+        },
+      });
+
+      try {
+        await sendPasswordResetEmail(email, code);
+      } catch (emailError) {
+        console.error("Erro ao enviar e-mail de redefinição:", emailError);
+        const error = new Error("Erro ao enviar e-mail de redefinição") as CustomError;
+        error.statusCode = 500;
+        return next(error);
+      }
+
+      res.status(200).json({ message: "E-mail de redefinição de senha enviado" });
+    } catch (error) {
+      console.error("Erro ao solicitar redefinição de senha:", error);
+      if (error instanceof Error) {
+        const customError = error as CustomError;
+        res.status(customError.statusCode || 500).json({ 
+          error: customError.message || "Erro ao solicitar redefinição de senha" 
+        });
+      } else {
+        res.status(500).json({ error: "Erro ao solicitar redefinição de senha" });
+      }
+    }
+  }
+
+  async resendVerificationEmail(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        const error = new Error("E-mail é obrigatório") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      const patient = await prisma.patient.findUnique({ where: { email } });
+      if (!patient) {
+        const error = new Error("Paciente não encontrado") as CustomError;
+        error.statusCode = 404;
+        return next(error);
+      }
+
+      if (patient.isEmailVerified) {
+        const error = new Error("E-mail já verificado") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hora
+
+      await prisma.patient.update({
+        where: { email },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: expiresAt,
+        },
+      });
+
+      try {
+        await sendVerificationEmail(email, code);
+      } catch (emailError) {
+        console.error("Erro ao enviar e-mail de verificação:", emailError);
+        const error = new Error("Erro ao enviar e-mail de verificação") as CustomError;
+        error.statusCode = 500;
+        return next(error);
+      }
+
+      res.status(200).json({ message: "E-mail de verificação reenviado" });
+    } catch (error) {
+      console.error("Erro ao reenviar e-mail de verificação:", error);
+      if (error instanceof Error) {
+        const customError = error as CustomError;
+        res.status(customError.statusCode || 500).json({ 
+          error: customError.message || "Erro ao reenviar e-mail de verificação" 
+        });
+      } else {
+        res.status(500).json({ error: "Erro ao reenviar e-mail de verificação" });
+      }
     }
   }
 }

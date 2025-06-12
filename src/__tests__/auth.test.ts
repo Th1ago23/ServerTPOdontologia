@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { app } from '../app';
 import { clearDatabase, prisma, createTestUser, createTestPatient } from '../tests/utils';
-import { createVerificationCode } from '../services/verificationService';
+import { generateVerificationCode } from '../services/verificationService';
 import bcrypt from 'bcryptjs';
 
 // Hooks globais
@@ -101,20 +101,27 @@ describe('Auth Controller', () => {
       const cookies = loginResponse.headers['set-cookie'];
 
       // Gera o código de verificação
-      await createVerificationCode(testUser.email, false);
+      const code = generateVerificationCode();
+      await prisma.user.update({
+        where: { email: testUser.email },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: new Date(Date.now() + 3600000)
+        }
+      });
 
       // Busca o código de verificação salvo no banco
       const userInDb = await prisma.user.findUnique({ where: { email: testUser.email } });
       console.log('Código salvo:', userInDb?.emailVerificationCode, 'para o e-mail:', testUser.email);
-      const code = userInDb?.emailVerificationCode;
-      expect(code).toBeDefined();
+      const storedCode = userInDb?.emailVerificationCode;
+      expect(storedCode).toBeDefined();
 
       // Tenta verificar email
       const response = await request(app)
         .post('/api/auth/verify-email')
         .set('Cookie', cookies)
         .send({
-          code: code,
+          code: storedCode,
           email: 'test@example.com'
         });
 
@@ -127,7 +134,14 @@ describe('Auth Controller', () => {
         .post('/api/auth/login')
         .send({ email: testUser.email, password: 'testpassword' });
       const cookies = loginResponse.headers['set-cookie'];
-      await createVerificationCode(testUser.email, false);
+      const code = generateVerificationCode();
+      await prisma.user.update({
+        where: { email: testUser.email },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: new Date(Date.now() + 3600000)
+        }
+      });
       const response = await request(app)
         .post('/api/auth/verify-email')
         .set('Cookie', cookies)
@@ -141,7 +155,7 @@ describe('Auth Controller', () => {
         .post('/api/auth/login')
         .send({ email: testUser.email, password: 'testpassword' });
       const cookies = loginResponse.headers['set-cookie'];
-      await createVerificationCode(testUser.email, false);
+      await generateVerificationCode(testUser.email, false);
       // Expira o código manualmente
       await prisma.user.update({
         where: { email: testUser.email },
@@ -180,10 +194,17 @@ describe('Auth Controller', () => {
         .post('/api/auth-patient/login')
         .send({ email: testPatient.email, password: 'testpassword' });
       const cookies = loginResponse.headers['set-cookie'];
-      await createVerificationCode(testPatient.email, true);
+      const code = generateVerificationCode();
+      await prisma.patient.update({
+        where: { email: testPatient.email },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: new Date(Date.now() + 3600000)
+        }
+      });
       const patientInDb = await prisma.patient.findUnique({ where: { email: testPatient.email } });
-      const code = patientInDb?.emailVerificationCode;
-      expect(code).toBeDefined();
+      const verificationCode = patientInDb?.emailVerificationCode;
+      expect(verificationCode).toBeDefined();
       const response = await request(app)
         .post('/api/auth/verify-email')
         .set('Cookie', cookies)

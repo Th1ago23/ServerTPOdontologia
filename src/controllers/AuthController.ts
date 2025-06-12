@@ -186,8 +186,13 @@ class AuthController {
         },
       });
 
-      // Enviar email de verificação
-      await sendVerificationEmail(email, code);
+      try {
+        // Enviar email de verificação
+        await sendVerificationEmail(email, code);
+      } catch (emailError) {
+        console.error("Erro ao enviar email de verificação:", emailError);
+        // Não interrompe o fluxo se o email falhar
+      }
   
       res.status(201).json({
         message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",

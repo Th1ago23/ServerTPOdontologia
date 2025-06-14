@@ -415,40 +415,30 @@ class AuthController {
   }
 
   async me(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
-    const { userId, patientId, isAdmin } = req;
-    
     try {
-      if (isAdmin && userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { id: true, email: true, isAdmin: true },
-        });
-        if (user) {
-          res.status(200).json(user);
-          return; // Indica que a função terminou aqui
-        } else {
-          res.status(404).json({ error: "Usuário não encontrado" });
-          return; // Indica que a função terminou aqui
-        }
-      } else if (!isAdmin && patientId) {
-        const patient = await prisma.patient.findUnique({
-          where: { id: patientId },
-          select: { id: true, name: true, email: true, phone: true, cpf: true, birthDate: true, address: true, number: true, complement: true, city: true, state: true, zipCode: true, country: true, createdAt: true },
-        });
-        if (patient) {
-          res.status(200).json(patient);
-          return; // Indica que a função terminou aqui
-        } else {
-          res.status(404).json({ error: "Paciente não encontrado" });
-          return; // Indica que a função terminou aqui
-        }
+      if (!req.userId) {
+        res.status(401).json({ error: "Não autorizado" });
+        return;
       }
-  
-      res.status(400).json({ error: "Tipo de usuário inválido no token" });
-      return; // Indica que a função terminou aqui
+
+      const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: {
+          id: true,
+          email: true,
+          isAdmin: true
+        }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: "Usuário não encontrado" });
+        return;
+      }
+
+      res.status(200).json(user);
     } catch (error) {
-      console.error("Erro ao buscar dados do usuário/paciente:", error);
-      return next(error); // Passa o erro para o middleware de tratamento de erros
+      console.error("Erro ao buscar usuário:", error);
+      res.status(500).json({ error: "Erro ao buscar usuário" });
     }
   }
 

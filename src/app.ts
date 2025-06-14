@@ -105,13 +105,7 @@ const corsOptions: CorsOptions = {
       callback(null, true);
     } else {
       console.log('Origin bloqueada:', origin);
-      // Em produção, retorna erro mais específico
-      if (process.env.NODE_ENV === 'production') {
-        callback(new Error(`Origin ${origin} não permitida por CORS`), false);
-      } else {
-        console.log('Ambiente de desenvolvimento - permitindo origin');
-        callback(null, true); // Em desenvolvimento, permite todas as origins
-      }
+      callback(new Error(`Origin ${origin} não permitida por CORS`), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

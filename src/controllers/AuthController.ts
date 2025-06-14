@@ -37,7 +37,7 @@ class AuthController {
     return { accessToken, refreshToken };
   }
 
-  private async saveRefreshToken(userId: number, refreshToken: string) {
+  private async saveRefreshToken(userId: number | null, patientId: number | null, refreshToken: string) {
     const hashedToken = crypto
       .createHash("sha256")
       .update(refreshToken)
@@ -47,6 +47,7 @@ class AuthController {
       data: {
         token: hashedToken,
         userId,
+        patientId,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
       },
     });
@@ -206,7 +207,7 @@ class AuthController {
       console.log('Token gerado com sucesso');
 
       // Salvar refresh token
-      await this.saveRefreshToken(user.id, refreshToken);
+      await this.saveRefreshToken(user.id, null, refreshToken);
 
       // Configurar cookie com o token
       res.cookie('accessToken', accessToken, {
@@ -371,7 +372,7 @@ class AuthController {
   async loginPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password } = req.body;
-      console.log('Tentativa de login de paciente:', { email });
+      console.log('Tentativa de login paciente:', { email });
       
       const patient = await prisma.patient.findUnique({ where: { email } });
       console.log('Paciente encontrado:', patient ? 'Sim' : 'Não');
@@ -401,32 +402,30 @@ class AuthController {
       }
 
       const { accessToken, refreshToken } = this.generateTokens(patient.id, false);
-      console.log('Token gerado com sucesso');
+      await this.saveRefreshToken(null, patient.id, refreshToken);
 
-      // Salvar refresh token
-      await this.saveRefreshToken(patient.id, refreshToken);
-
-      // Configurar cookie com o token
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
-        maxAge: 15 * 60 * 1000 // 15 minutos
+        maxAge: 15 * 60 * 1000, // 15 minutos
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
 
       res.status(200).json({
         message: "Login realizado com sucesso",
         user: {
           id: patient.id,
-          email: patient.email,
           name: patient.name,
+          email: patient.email,
           isAdmin: false
         }
       });
@@ -698,7 +697,7 @@ class AuthController {
       );
 
       await this.revokeRefreshToken(refreshToken);
-      await this.saveRefreshToken(decoded.userId, newRefreshToken);
+      await this.saveRefreshToken(decoded.userId, null, newRefreshToken);
 
       res.cookie('accessToken', accessToken, {
         httpOnly: true,

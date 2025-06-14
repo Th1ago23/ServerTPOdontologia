@@ -32,6 +32,7 @@ model Patient {
   updatedAt           DateTime             @updatedAt
   appointments        Appointment[]
   appointmentRequests AppointmentRequest[] @relation(name: "PatientToAppointmentRequest") // Nome explícito da relação
+  refreshTokens       RefreshToken[]
 }
 
 model User {
@@ -90,8 +91,10 @@ model AppointmentRequest {
 model RefreshToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patientId Int?
+  patient   Patient? @relation(fields: [patientId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
 }

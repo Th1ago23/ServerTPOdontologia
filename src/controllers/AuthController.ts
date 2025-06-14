@@ -484,6 +484,8 @@ class AuthController {
       await prisma.patient.update({
         where: { email },
         data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: expiresAt,
           passwordResetCode: code,
           passwordResetExpires: expiresAt,
         },
@@ -543,6 +545,8 @@ class AuthController {
         data: {
           emailVerificationCode: code,
           emailVerificationExpires: expiresAt,
+          passwordResetCode: code,
+          passwordResetExpires: expiresAt,
         },
       });
 

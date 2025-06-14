@@ -178,7 +178,7 @@ class AuthController {
 
   async registerPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      console.log('Iniciando registro de paciente:', req.body);
+      console.log('Iniciando registro de paciente. Dados recebidos:', JSON.stringify(req.body, null, 2));
       const { name, email, cpf, phone, birthDate, address, city, state, zipCode, country, password, number, complement } = req.body;
 
       // Validação dos campos obrigatórios
@@ -203,7 +203,9 @@ class AuthController {
 
       // Validação de CPF (apenas formato básico)
       const cpfRegex = /^\d{11}$/;
-      if (!cpfRegex.test(cpf.replace(/\D/g, ""))) {
+      const cpfLimpo = cpf.replace(/\D/g, "");
+      console.log('CPF recebido:', cpf, 'CPF limpo:', cpfLimpo);
+      if (!cpfRegex.test(cpfLimpo)) {
         console.log('CPF inválido:', cpf);
         const error = new Error("CPF inválido") as CustomError;
         error.statusCode = 400;
@@ -212,7 +214,9 @@ class AuthController {
 
       // Validação de telefone
       const phoneRegex = /^\d{10,11}$/;
-      if (!phoneRegex.test(phone.replace(/\D/g, ""))) {
+      const phoneLimpo = phone.replace(/\D/g, "");
+      console.log('Telefone recebido:', phone, 'Telefone limpo:', phoneLimpo);
+      if (!phoneRegex.test(phoneLimpo)) {
         console.log('Telefone inválido:', phone);
         const error = new Error("Telefone inválido") as CustomError;
         error.statusCode = 400;
@@ -278,6 +282,14 @@ class AuthController {
         });
 
         console.log('Paciente criado com sucesso:', patient.id);
+
+        // Atualiza os campos de reset de senha usando uma query raw
+        await prisma.$executeRaw`
+          UPDATE "Patient"
+          SET "passwordResetCode" = ${code},
+              "passwordResetExpires" = ${expiresAt}
+          WHERE id = ${patient.id}
+        `;
 
         try {
           // Enviar email de verificação
@@ -481,6 +493,7 @@ class AuthController {
       const code = generateVerificationCode();
       const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
+      // Primeiro atualiza os campos de verificação de email
       await prisma.patient.update({
         where: { email },
         data: {
@@ -488,6 +501,14 @@ class AuthController {
           emailVerificationExpires: expiresAt
         },
       });
+
+      // Depois atualiza os campos de reset de senha usando uma query raw
+      await prisma.$executeRaw`
+        UPDATE "Patient"
+        SET "passwordResetCode" = ${code},
+            "passwordResetExpires" = ${expiresAt}
+        WHERE email = ${email}
+      `;
 
       try {
         await sendPasswordResetEmail(email, code);
@@ -538,6 +559,7 @@ class AuthController {
       const code = generateVerificationCode();
       const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
+      // Primeiro atualiza os campos de verificação de email
       await prisma.patient.update({
         where: { email },
         data: {
@@ -545,6 +567,14 @@ class AuthController {
           emailVerificationExpires: expiresAt
         },
       });
+
+      // Depois atualiza os campos de reset de senha usando uma query raw
+      await prisma.$executeRaw`
+        UPDATE "Patient"
+        SET "passwordResetCode" = ${code},
+            "passwordResetExpires" = ${expiresAt}
+        WHERE email = ${email}
+      `;
 
       try {
         await sendVerificationEmail(email, code);

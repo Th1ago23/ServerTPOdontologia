@@ -2,10 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 interface DecodedToken {
-  userId?: number;
-  patientId?: number;
+  id: number;
   email: string;
   isAdmin?: boolean;
+  patientId?: number;
 }
 
 declare global {
@@ -16,7 +16,7 @@ declare global {
   }
 }
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies.token;
 
@@ -33,7 +33,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   }
 };
 
-export const adminMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const adminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies.token;
 

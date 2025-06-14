@@ -1,14 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth';
 import patientRoutes from './routes/patient';
 import appointmentRoutes from './routes/appointment';
 import doctorRoutes from './routes/doctor';
 
 const app = express();
-const prisma = new PrismaClient();
 
 // Middleware
 app.use(express.json());
@@ -25,7 +23,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctors', doctorRoutes);
 
 // Rota de verificação de saúde
-app.get('/health', (req, res) => {
+app.get('/health', (_, res) => {
   res.json({ status: 'ok' });
 });
 

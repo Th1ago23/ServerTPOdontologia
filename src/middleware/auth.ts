@@ -16,12 +16,13 @@ declare global {
   }
 }
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const token = req.cookies.token;
 
     if (!token) {
-      return res.status(401).json({ message: 'Token não fornecido' });
+      res.status(401).json({ message: 'Token não fornecido' });
+      return;
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as DecodedToken;
@@ -29,29 +30,31 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     next();
   } catch (error) {
     console.error('Erro na autenticação:', error);
-    return res.status(401).json({ message: 'Token inválido' });
+    res.status(401).json({ message: 'Token inválido' });
   }
 };
 
-export const adminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const adminMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const token = req.cookies.token;
 
     if (!token) {
-      return res.status(401).json({ message: 'Token não fornecido' });
+      res.status(401).json({ message: 'Token não fornecido' });
+      return;
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as DecodedToken;
     
     if (!decoded.isAdmin) {
-      return res.status(403).json({ message: 'Acesso negado' });
+      res.status(403).json({ message: 'Acesso negado' });
+      return;
     }
 
     req.user = decoded;
     next();
   } catch (error) {
     console.error('Erro na autenticação:', error);
-    return res.status(401).json({ message: 'Token inválido' });
+    res.status(401).json({ message: 'Token inválido' });
   }
 };
 

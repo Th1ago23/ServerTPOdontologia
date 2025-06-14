@@ -1,0 +1,4 @@
+# This is an empty migration.
+
+migration_name = "20240311000001_add_password_reset_fields"
+checksum = "1234567890" 

@@ -123,6 +123,14 @@ const corsOptions: CorsOptions = {
   maxAge: 86400 // Cache das respostas preflight por 24 horas
 };
 
+// Middleware para forçar HTTPS
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV === 'production' && !req.secure) {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
 // Middleware para corrigir URLs com duplo slash - DEVE vir antes do CORS
 app.use((req, res, next) => {
   // Remove múltiplos slashes consecutivos

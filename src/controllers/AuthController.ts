@@ -3,10 +3,12 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { generateVerificationCode, sendVerificationEmail, verifyEmail, sendPasswordResetEmail } from "../services/verificationService";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 const saltRounds = 10;
-const jwtSecret = process.env.JWT_SECRET || "JWT_SECRET"; // Use uma variável de ambiente segura
+const jwtSecret = process.env.JWT_SECRET || "JWT_SECRET";
+const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET || "REFRESH_TOKEN_SECRET";
 
 interface CustomError extends Error {
   statusCode?: number;
@@ -19,6 +21,48 @@ interface AuthRequest extends Request {
 }
 
 class AuthController {
+  private generateTokens(userId: number, isAdmin: boolean) {
+    const accessToken = jwt.sign(
+      { userId, isAdmin },
+      jwtSecret,
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId, isAdmin },
+      refreshTokenSecret,
+      { expiresIn: "7d" }
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  private async saveRefreshToken(userId: number, refreshToken: string) {
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(refreshToken)
+      .digest("hex");
+
+    await prisma.refreshToken.create({
+      data: {
+        token: hashedToken,
+        userId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
+      },
+    });
+  }
+
+  private async revokeRefreshToken(token: string) {
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    await prisma.refreshToken.deleteMany({
+      where: { token: hashedToken },
+    });
+  }
+
   async registerUser(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
@@ -158,18 +202,29 @@ class AuthController {
         return;
       }
 
-      const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, jwtSecret, { expiresIn: "1h" });
-      console.log('Token gerado com sucesso');
+      const { accessToken, refreshToken } = this.generateTokens(user.id, user.isAdmin);
+      await this.saveRefreshToken(user.id, refreshToken);
       
-      // Configurar o cookie HTTP-only
-      res.cookie('token', token, {
+      // Configurar os cookies HTTP-only
+      res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
+        maxAge: 15 * 60 * 1000, // 15 minutos
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+      });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
         domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
       
-      res.status(200).json({ token, user: { id: user.id, email: user.email, isAdmin: user.isAdmin } });
+      res.status(200).json({ 
+        user: { id: user.id, email: user.email, isAdmin: user.isAdmin } 
+      });
     } catch (error) {
       console.error("Erro ao fazer login:", error);
       res.status(500).json({ error: "Erro ao fazer login" });
@@ -426,17 +481,32 @@ class AuthController {
     }
   }
 
-  async logout(req: Request, res: Response) {
+  async logout(req: Request, res: Response): Promise<void> {
     try {
-      res.clearCookie('token', {
+      const refreshToken = req.cookies.refreshToken;
+
+      if (refreshToken) {
+        await this.revokeRefreshToken(refreshToken);
+      }
+
+      res.clearCookie('accessToken', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
+        sameSite: 'strict',
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
-      res.json({ message: 'Logout realizado com sucesso' });
+
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+      });
+
+      res.status(200).json({ message: "Logout realizado com sucesso" });
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      res.status(500).json({ error: 'Erro ao fazer logout' });
+      console.error("Erro ao fazer logout:", error);
+      res.status(500).json({ error: "Erro ao fazer logout" });
     }
   }
 
@@ -579,6 +649,65 @@ class AuthController {
       } else {
         res.status(500).json({ error: "Erro ao reenviar e-mail de verificação" });
       }
+    }
+  }
+
+  async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+
+      if (!refreshToken) {
+        res.status(401).json({ error: "Refresh token não fornecido" });
+        return;
+      }
+
+      const decoded = jwt.verify(refreshToken, refreshTokenSecret) as { userId: number; isAdmin: boolean };
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
+
+      const storedToken = await prisma.refreshToken.findFirst({
+        where: {
+          token: hashedToken,
+          userId: decoded.userId,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!storedToken) {
+        res.status(401).json({ error: "Refresh token inválido ou expirado" });
+        return;
+      }
+
+      const { accessToken, refreshToken: newRefreshToken } = this.generateTokens(
+        decoded.userId,
+        decoded.isAdmin
+      );
+
+      await this.revokeRefreshToken(refreshToken);
+      await this.saveRefreshToken(decoded.userId, newRefreshToken);
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000, // 15 minutos
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+      });
+
+      res.cookie('refreshToken', newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+      });
+
+      res.status(200).json({ message: "Tokens atualizados com sucesso" });
+    } catch (error) {
+      console.error("Erro ao atualizar tokens:", error);
+      res.status(401).json({ error: "Erro ao atualizar tokens" });
     }
   }
 }

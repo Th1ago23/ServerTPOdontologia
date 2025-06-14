@@ -35,15 +35,16 @@ model Patient {
 }
 
 model User {
-  id                    Int      @id @default(autoincrement())
-  email                 String   @unique
+  id                    Int            @id @default(autoincrement())
+  email                 String         @unique
   password              String
-  isAdmin               Boolean  @default(false) // Indica se o usuário é administrador
-  isEmailVerified       Boolean  @default(false)
+  isAdmin               Boolean        @default(false)
+  isEmailVerified       Boolean        @default(false)
   emailVerificationCode String?
   emailVerificationExpires DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  refreshTokens         RefreshToken[]
 }
 
 model Doctor {
@@ -84,6 +85,15 @@ model AppointmentRequest {
   updatedAt     DateTime          @updatedAt
   appointmentId Int?              @unique
   appointment   Appointment?      @relation(fields: [appointmentId], references: [id], name: "AppointmentToAppointmentRequest")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 enum AppointmentStatus {

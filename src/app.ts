@@ -40,10 +40,22 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Configuração do rate limiter
-const limiter = rateLimit({
+const defaultLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 100, // limite de 100 requisições por IP
   message: 'Muitas requisições deste IP, tente novamente mais tarde'
+});
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 5, // limite de 5 tentativas de login por hora
+  message: 'Muitas tentativas de login, tente novamente mais tarde'
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 200, // limite de 200 requisições por IP
+  message: 'Muitas requisições à API, tente novamente mais tarde'
 });
 
 const allowedOrigins = [
@@ -125,9 +137,44 @@ app.use((req, res, next) => {
 
 // Middlewares de segurança
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "unsafe-none" }
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", ...allowedOrigins],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginResourcePolicy: { policy: "same-site" },
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  crossOriginEmbedderPolicy: { policy: "require-corp" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  strictTransportSecurity: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  xContentTypeOptions: true,
+  xFrameOptions: { action: "deny" },
+  xXssProtection: true,
+  noSniff: true,
+  hidePoweredBy: true,
+  dnsPrefetchControl: { allow: false }
 }));
+
+// Adicionar headers de segurança adicionais
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  next();
+});
+
 app.use(limiter);
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
@@ -161,6 +208,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   console.log('Cookies:', req.cookies);
   next();
 });
+
+// Aplicar rate limiters específicos
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter);
+app.use('/', defaultLimiter);
 
 // Rota raiz
 app.get('/', (req, res) => {

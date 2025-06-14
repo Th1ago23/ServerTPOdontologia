@@ -43,7 +43,7 @@ class AuthController {
       .update(refreshToken)
       .digest("hex");
 
-    await prisma.refreshToken.create({
+    await prisma.RefreshToken.create({
       data: {
         token: hashedToken,
         userId,
@@ -59,7 +59,7 @@ class AuthController {
       .update(token)
       .digest("hex");
 
-    await prisma.refreshToken.deleteMany({
+    await prisma.RefreshToken.deleteMany({
       where: { token: hashedToken },
     });
   }
@@ -678,7 +678,7 @@ class AuthController {
         .update(refreshToken)
         .digest("hex");
 
-      const storedToken = await prisma.refreshToken.findFirst({
+      const storedToken = await prisma.RefreshToken.findFirst({
         where: {
           token: hashedToken,
           userId: decoded.userId,

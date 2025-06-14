@@ -129,58 +129,50 @@ class AuthController {
   async loginUser(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
+      console.log('Tentativa de login:', { email });
       
       const user = await prisma.user.findUnique({ where: { email } });
+      console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
       
       if (!user) {
-        res.status(401).json({ message: "Credenciais inválidas" });
+        console.log('Usuário não encontrado');
+        res.status(401).json({ error: "Credenciais inválidas" });
         return;
       }
 
       if (!user.isEmailVerified) {
+        console.log('E-mail não verificado');
         res.status(401).json({ 
-          message: "E-mail não verificado",
+          error: "E-mail não verificado",
           needsVerification: true
         });
         return;
       }
 
       const passwordMatch = await bcrypt.compare(password, user.password);
+      console.log('Senha corresponde:', passwordMatch ? 'Sim' : 'Não');
       
       if (!passwordMatch) {
-        res.status(401).json({ message: "Credenciais inválidas" });
+        console.log('Senha incorreta');
+        res.status(401).json({ error: "Credenciais inválidas" });
         return;
       }
 
-      const token = jwt.sign(
-        { 
-          userId: user.id,
-          email: user.email,
-          isAdmin: user.isAdmin 
-        }, 
-        jwtSecret, 
-        { expiresIn: "24h" }
-      );
+      const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, jwtSecret, { expiresIn: "1h" });
+      console.log('Token gerado com sucesso');
       
       // Configurar o cookie HTTP-only
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 horas
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
       
-      res.status(200).json({ 
-        message: "Login realizado com sucesso",
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          isAdmin: user.isAdmin 
-        } 
-      });
+      res.status(200).json({ token, user: { id: user.id, email: user.email, isAdmin: user.isAdmin } });
     } catch (error) {
       console.error("Erro ao fazer login:", error);
-      res.status(500).json({ message: "Erro interno do servidor" });
+      res.status(500).json({ error: "Erro ao fazer login" });
     }
   }
 
@@ -318,57 +310,52 @@ class AuthController {
   async loginPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password } = req.body;
+      console.log('Tentativa de login de paciente:', { email });
       
       const patient = await prisma.patient.findUnique({ where: { email } });
+      console.log('Paciente encontrado:', patient ? 'Sim' : 'Não');
       
       if (!patient) {
-        res.status(401).json({ message: "Credenciais inválidas" });
-        return;
+        console.log('Paciente não encontrado');
+        const error = new Error("Credenciais inválidas") as CustomError;
+        error.statusCode = 401;
+        return next(error);
       }
 
       if (!patient.isEmailVerified) {
+        console.log('E-mail não verificado');
         res.status(401).json({ 
-          message: "E-mail não verificado",
+          error: "E-mail não verificado",
           needsVerification: true
         });
         return;
       }
 
       const passwordMatch = await bcrypt.compare(password, patient.password);
+      console.log('Senha corresponde:', passwordMatch ? 'Sim' : 'Não');
       
       if (!passwordMatch) {
-        res.status(401).json({ message: "Credenciais inválidas" });
-        return;
+        console.log('Senha incorreta');
+        const error = new Error("Credenciais inválidas") as CustomError;
+        error.statusCode = 401;
+        return next(error);
       }
 
-      const token = jwt.sign(
-        { 
-          patientId: patient.id,
-          email: patient.email
-        }, 
-        jwtSecret, 
-        { expiresIn: "24h" }
-      );
+      const token = jwt.sign({ patientId: patient.id, isAdmin: false }, jwtSecret, { expiresIn: "1h" });
+      console.log('Token gerado com sucesso');
       
       // Configurar o cookie HTTP-only
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 horas
+        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
       });
       
-      res.status(200).json({ 
-        message: "Login realizado com sucesso",
-        patient: { 
-          id: patient.id, 
-          email: patient.email,
-          name: patient.name
-        } 
-      });
+      res.status(200).json({ token, patientId: patient.id, message: "Login realizado com sucesso" });
     } catch (error) {
-      console.error("Erro ao fazer login:", error);
-      res.status(500).json({ message: "Erro interno do servidor" });
+      console.error("Erro ao fazer login do paciente:", error);
+      return next(error);
     }
   }
 
@@ -441,17 +428,15 @@ class AuthController {
 
   async logout(req: Request, res: Response) {
     try {
-      // Limpar o cookie
       res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
       });
-
-      res.status(200).json({ message: 'Logout realizado com sucesso' });
+      res.json({ message: 'Logout realizado com sucesso' });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      res.status(500).json({ message: 'Erro interno do servidor' });
+      res.status(500).json({ error: 'Erro ao fazer logout' });
     }
   }
 

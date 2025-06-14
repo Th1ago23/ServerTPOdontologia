@@ -1,61 +1,46 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-interface DecodedToken {
-  id: number;
-  email: string;
-  isAdmin?: boolean;
+const jwtSecret = process.env.JWT_SECRET || "JWT_SECRET";
+
+interface AuthRequest extends Request {
+  userId?: number;
   patientId?: number;
+  isAdmin?: boolean;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: DecodedToken;
-    }
-  }
-}
-
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    // Pegar o token do cookie
     const token = req.cookies.token;
 
     if (!token) {
-      res.status(401).json({ message: 'Token não fornecido' });
-      return;
+      return res.status(401).json({ error: "Token não fornecido" });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as DecodedToken;
-    req.user = decoded;
+    const decoded = jwt.verify(token, jwtSecret) as {
+      userId?: number;
+      patientId?: number;
+      isAdmin?: boolean;
+    };
+
+    // Adicionar informações do usuário à requisição
+    req.userId = decoded.userId;
+    req.patientId = decoded.patientId;
+    req.isAdmin = decoded.isAdmin;
+
     next();
   } catch (error) {
-    console.error('Erro na autenticação:', error);
-    res.status(401).json({ message: 'Token inválido' });
+    console.error("Erro na autenticação:", error);
+    res.status(401).json({ error: "Token inválido" });
   }
 };
 
-export const adminMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const token = req.cookies.token;
-
-    if (!token) {
-      res.status(401).json({ message: 'Token não fornecido' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default_secret') as DecodedToken;
-    
-    if (!decoded.isAdmin) {
-      res.status(403).json({ message: 'Acesso negado' });
-      return;
-    }
-
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.error('Erro na autenticação:', error);
-    res.status(401).json({ message: 'Token inválido' });
+export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.isAdmin) {
+    return res.status(403).json({ error: "Acesso negado" });
   }
+  next();
 };
 
 export const patientMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {

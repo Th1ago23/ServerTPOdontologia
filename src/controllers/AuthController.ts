@@ -485,9 +485,7 @@ class AuthController {
         where: { email },
         data: {
           emailVerificationCode: code,
-          emailVerificationExpires: expiresAt,
-          passwordResetCode: code,
-          passwordResetExpires: expiresAt,
+          emailVerificationExpires: expiresAt
         },
       });
 
@@ -544,9 +542,7 @@ class AuthController {
         where: { email },
         data: {
           emailVerificationCode: code,
-          emailVerificationExpires: expiresAt,
-          passwordResetCode: code,
-          passwordResetExpires: expiresAt,
+          emailVerificationExpires: expiresAt
         },
       });
 

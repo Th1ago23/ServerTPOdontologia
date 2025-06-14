@@ -129,50 +129,58 @@ class AuthController {
   async loginUser(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
-      console.log('Tentativa de login:', { email });
       
       const user = await prisma.user.findUnique({ where: { email } });
-      console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
       
       if (!user) {
-        console.log('Usuário não encontrado');
-        res.status(401).json({ error: "Credenciais inválidas" });
+        res.status(401).json({ message: "Credenciais inválidas" });
         return;
       }
 
       if (!user.isEmailVerified) {
-        console.log('E-mail não verificado');
         res.status(401).json({ 
-          error: "E-mail não verificado",
+          message: "E-mail não verificado",
           needsVerification: true
         });
         return;
       }
 
       const passwordMatch = await bcrypt.compare(password, user.password);
-      console.log('Senha corresponde:', passwordMatch ? 'Sim' : 'Não');
       
       if (!passwordMatch) {
-        console.log('Senha incorreta');
-        res.status(401).json({ error: "Credenciais inválidas" });
+        res.status(401).json({ message: "Credenciais inválidas" });
         return;
       }
 
-      const token = jwt.sign({ userId: user.id, isAdmin: user.isAdmin }, jwtSecret, { expiresIn: "1h" });
-      console.log('Token gerado com sucesso');
+      const token = jwt.sign(
+        { 
+          userId: user.id,
+          email: user.email,
+          isAdmin: user.isAdmin 
+        }, 
+        jwtSecret, 
+        { expiresIn: "24h" }
+      );
       
       // Configurar o cookie HTTP-only
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        maxAge: 24 * 60 * 60 * 1000 // 24 horas
       });
       
-      res.status(200).json({ token, user: { id: user.id, email: user.email, isAdmin: user.isAdmin } });
+      res.status(200).json({ 
+        message: "Login realizado com sucesso",
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          isAdmin: user.isAdmin 
+        } 
+      });
     } catch (error) {
       console.error("Erro ao fazer login:", error);
-      res.status(500).json({ error: "Erro ao fazer login" });
+      res.status(500).json({ message: "Erro interno do servidor" });
     }
   }
 
@@ -201,60 +209,25 @@ class AuthController {
         return next(error);
       }
 
-      // Validação de CPF (apenas formato básico)
+      // Validação de CPF (apenas números)
       const cpfRegex = /^\d{11}$/;
-      const cpfLimpo = cpf.replace(/\D/g, "");
-      console.log('CPF recebido:', cpf, 'CPF limpo:', cpfLimpo);
-      if (!cpfRegex.test(cpfLimpo)) {
+      if (!cpfRegex.test(cpf.replace(/\D/g, ""))) {
         console.log('CPF inválido:', cpf);
-        const error = new Error("CPF inválido") as CustomError;
+        const error = new Error("CPF deve conter 11 dígitos numéricos") as CustomError;
         error.statusCode = 400;
         return next(error);
       }
 
-      // Validação de telefone
+      // Validação de telefone (apenas números)
       const phoneRegex = /^\d{10,11}$/;
-      const phoneLimpo = phone.replace(/\D/g, "");
-      console.log('Telefone recebido:', phone, 'Telefone limpo:', phoneLimpo);
-      if (!phoneRegex.test(phoneLimpo)) {
+      if (!phoneRegex.test(phone.replace(/\D/g, ""))) {
         console.log('Telefone inválido:', phone);
-        const error = new Error("Telefone inválido") as CustomError;
-        error.statusCode = 400;
-        return next(error);
-      }
-  
-      // Verificações de duplicidade
-      console.log('Verificando duplicidade de email:', email);
-      const existingPatientByEmail = await prisma.patient.findUnique({ where: { email } });
-      if (existingPatientByEmail) {
-        console.log('Email já cadastrado:', email);
-        const error = new Error("Paciente com este e-mail já cadastrado") as CustomError;
-        error.statusCode = 400;
-        return next(error);
-      }
-  
-      console.log('Verificando duplicidade de CPF:', cpf);
-      const existingPatientByCpf = await prisma.patient.findUnique({ where: { cpf } });
-      if (existingPatientByCpf) {
-        console.log('CPF já cadastrado:', cpf);
-        const error = new Error("Paciente com este CPF já cadastrado") as CustomError;
-        error.statusCode = 400;
-        return next(error);
-      }
-  
-      console.log('Verificando duplicidade de telefone:', phone);
-      const existingPatientByPhone = await prisma.patient.findUnique({ where: { phone } });
-      if (existingPatientByPhone) {
-        console.log('Telefone já cadastrado:', phone);
-        const error = new Error("Paciente com este número de telefone já cadastrado") as CustomError;
+        const error = new Error("Telefone deve conter 10 ou 11 dígitos numéricos") as CustomError;
         error.statusCode = 400;
         return next(error);
       }
 
-      // Hash da senha
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // Converter a data de nascimento para o formato correto
+      // Validação de data de nascimento
       const birthDateObj = new Date(birthDate);
       if (isNaN(birthDateObj.getTime())) {
         console.log('Data de nascimento inválida:', birthDate);
@@ -263,8 +236,35 @@ class AuthController {
         return next(error);
       }
 
-      // Gerar código de verificação
-      const verificationCode = generateVerificationCode();
+      // Verificar se o email já está em uso
+      const existingPatient = await prisma.patient.findUnique({ where: { email } });
+      if (existingPatient) {
+        console.log('Email já cadastrado:', email);
+        const error = new Error("Email já cadastrado") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Verificar se o CPF já está em uso
+      const existingCpf = await prisma.patient.findUnique({ where: { cpf } });
+      if (existingCpf) {
+        console.log('CPF já cadastrado:', cpf);
+        const error = new Error("CPF já cadastrado") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Verificar se o telefone já está em uso
+      const existingPhone = await prisma.patient.findUnique({ where: { phone } });
+      if (existingPhone) {
+        console.log('Telefone já cadastrado:', phone);
+        const error = new Error("Telefone já cadastrado") as CustomError;
+        error.statusCode = 400;
+        return next(error);
+      }
+
+      // Hash da senha
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
 
       // Criar o paciente
       const newPatient = await prisma.patient.create({
@@ -272,24 +272,30 @@ class AuthController {
           name,
           email,
           password: hashedPassword,
-          cpf: cpfLimpo,
-          phone: phoneLimpo,
+          cpf: cpf.replace(/\D/g, ""),
+          phone: phone.replace(/\D/g, ""),
           birthDate: birthDateObj,
           address,
+          number,
+          complement: complement || "",
           city,
           state,
           zipCode,
           country,
-          number,
-          complement: complement || "",
-          isEmailVerified: false,
-          emailVerificationCode: verificationCode,
-          emailVerificationExpires: new Date(Date.now() + 3600000) // 1 hora
+          isEmailVerified: false
         }
       });
 
-      // Enviar e-mail de verificação
-      await sendVerificationEmail(email, verificationCode);
+      // Gerar e enviar código de verificação
+      const code = generateVerificationCode();
+      await prisma.patient.update({
+        where: { email },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: new Date(Date.now() + 3600000)
+        }
+      });
+      await sendVerificationEmail(email, code);
 
       res.status(201).json({
         message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",
@@ -312,52 +318,57 @@ class AuthController {
   async loginPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password } = req.body;
-      console.log('Tentativa de login de paciente:', { email });
       
       const patient = await prisma.patient.findUnique({ where: { email } });
-      console.log('Paciente encontrado:', patient ? 'Sim' : 'Não');
       
       if (!patient) {
-        console.log('Paciente não encontrado');
-        const error = new Error("Credenciais inválidas") as CustomError;
-        error.statusCode = 401;
-        return next(error);
+        res.status(401).json({ message: "Credenciais inválidas" });
+        return;
       }
 
       if (!patient.isEmailVerified) {
-        console.log('E-mail não verificado');
         res.status(401).json({ 
-          error: "E-mail não verificado",
+          message: "E-mail não verificado",
           needsVerification: true
         });
         return;
       }
 
       const passwordMatch = await bcrypt.compare(password, patient.password);
-      console.log('Senha corresponde:', passwordMatch ? 'Sim' : 'Não');
       
       if (!passwordMatch) {
-        console.log('Senha incorreta');
-        const error = new Error("Credenciais inválidas") as CustomError;
-        error.statusCode = 401;
-        return next(error);
+        res.status(401).json({ message: "Credenciais inválidas" });
+        return;
       }
 
-      const token = jwt.sign({ patientId: patient.id, isAdmin: false }, jwtSecret, { expiresIn: "1h" });
-      console.log('Token gerado com sucesso');
+      const token = jwt.sign(
+        { 
+          patientId: patient.id,
+          email: patient.email
+        }, 
+        jwtSecret, 
+        { expiresIn: "24h" }
+      );
       
       // Configurar o cookie HTTP-only
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        maxAge: 24 * 60 * 60 * 1000 // 24 horas
       });
       
-      res.status(200).json({ token, patientId: patient.id, message: "Login realizado com sucesso" });
+      res.status(200).json({ 
+        message: "Login realizado com sucesso",
+        patient: { 
+          id: patient.id, 
+          email: patient.email,
+          name: patient.name
+        } 
+      });
     } catch (error) {
-      console.error("Erro ao fazer login do paciente:", error);
-      return next(error);
+      console.error("Erro ao fazer login:", error);
+      res.status(500).json({ message: "Erro interno do servidor" });
     }
   }
 
@@ -430,15 +441,17 @@ class AuthController {
 
   async logout(req: Request, res: Response) {
     try {
+      // Limpar o cookie
       res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
       });
-      res.json({ message: 'Logout realizado com sucesso' });
+
+      res.status(200).json({ message: 'Logout realizado com sucesso' });
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      res.status(500).json({ error: 'Erro ao fazer logout' });
+      res.status(500).json({ message: 'Erro interno do servidor' });
     }
   }
 

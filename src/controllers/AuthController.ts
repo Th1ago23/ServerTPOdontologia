@@ -251,72 +251,57 @@ class AuthController {
         return next(error);
       }
 
-      // Gerar código de verificação
-      const code = generateVerificationCode();
-      const expiresAt = new Date(Date.now() + 3600000); // 1 hora
-
-      // Criação do paciente
-      console.log('Criando novo paciente...');
+      // Hash da senha
       const hashedPassword = await bcrypt.hash(password, saltRounds);
-      
-      try {
-        const patient = await prisma.patient.create({
-          data: {
-            name,
-            email,
-            cpf,
-            phone,
-            birthDate: new Date(birthDate),
-            address,
-            number,
-            complement: complement || "",
-            city,
-            state,
-            zipCode,
-            country: country || "Brasil",
-            password: hashedPassword,
-            isEmailVerified: false,
-            emailVerificationCode: code,
-            emailVerificationExpires: expiresAt
-          },
-        });
 
-        console.log('Paciente criado com sucesso:', patient.id);
-
-        // Atualiza os campos de reset de senha usando uma query raw
-        await prisma.$executeRaw`
-          UPDATE "Patient"
-          SET "passwordResetCode" = ${code},
-              "passwordResetExpires" = ${expiresAt}
-          WHERE id = ${patient.id}
-        `;
-
-        try {
-          // Enviar email de verificação
-          console.log('Enviando email de verificação...');
-          await sendVerificationEmail(email, code);
-          console.log('Email de verificação enviado com sucesso');
-        } catch (emailError) {
-          console.error("Erro ao enviar email de verificação:", emailError);
-          // Não interrompe o fluxo se o email falhar
-        }
-    
-        res.status(201).json({
-          message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",
-          patientId: patient.id,
-        });
-      } catch (dbError) {
-        console.error("Erro ao criar paciente no banco de dados:", dbError);
-        const error = new Error("Erro ao criar paciente no banco de dados") as CustomError;
-        error.statusCode = 500;
+      // Converter a data de nascimento para o formato correto
+      const birthDateObj = new Date(birthDate);
+      if (isNaN(birthDateObj.getTime())) {
+        console.log('Data de nascimento inválida:', birthDate);
+        const error = new Error("Data de nascimento inválida") as CustomError;
+        error.statusCode = 400;
         return next(error);
       }
+
+      // Gerar código de verificação
+      const verificationCode = generateVerificationCode();
+
+      // Criar o paciente
+      const newPatient = await prisma.patient.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          cpf: cpfLimpo,
+          phone: phoneLimpo,
+          birthDate: birthDateObj,
+          address,
+          city,
+          state,
+          zipCode,
+          country,
+          number,
+          complement: complement || "",
+          isEmailVerified: false,
+          emailVerificationCode: verificationCode,
+          emailVerificationExpires: new Date(Date.now() + 3600000) // 1 hora
+        }
+      });
+
+      // Enviar e-mail de verificação
+      await sendVerificationEmail(email, verificationCode);
+
+      res.status(201).json({
+        message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",
+        patientId: newPatient.id,
+        email: newPatient.email
+      });
     } catch (error) {
       console.error("Erro ao registrar paciente:", error);
       if (error instanceof Error) {
         const customError = error as CustomError;
-        res.status(customError.statusCode || 500).json({ 
-          error: customError.message || "Erro ao registrar paciente" 
+        res.status(customError.statusCode || 500).json({
+          error: customError.message || "Erro ao registrar paciente"
         });
       } else {
         res.status(500).json({ error: "Erro ao registrar paciente" });

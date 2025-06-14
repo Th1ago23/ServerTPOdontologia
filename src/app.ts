@@ -63,6 +63,8 @@ const allowedOrigins = [
   'http://www.tatianepeixotoodonto.live',
   'https://tatianepeixotoodonto.live',
   'http://tatianepeixotoodonto.live',
+  'https://api.tatianepeixotoodonto.live',
+  'http://api.tatianepeixotoodonto.live',
   'https://tpodontologia-frontend-699fc3612709.herokuapp.com',
   'http://tpodontologia-frontend-699fc3612709.herokuapp.com',
   process.env.FRONTEND_URL || 'http://localhost:5173',

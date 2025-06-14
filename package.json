@@ -14,7 +14,7 @@
     "seed": "ts-node prisma/seed.ts",
     "migrate": "npx prisma migrate deploy",
     "deploy": "npx prisma migrate deploy && npm run seed",
-    "heroku-postbuild": "npm install && npm run build",
+    "heroku-postbuild": "npm install && npx prisma generate && npm run build",
     "prisma:generate": "prisma generate"
   },
   "prisma": {

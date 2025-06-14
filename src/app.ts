@@ -113,7 +113,7 @@ const corsOptions: CorsOptions = {
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Cookie'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With', 'Cookie', 'Set-Cookie'],
   exposedHeaders: ['Set-Cookie'],
   credentials: true,
   preflightContinue: false,
@@ -131,6 +131,7 @@ app.use((req, res, next) => {
   console.log('URL original:', req.originalUrl);
   console.log('URL corrigida:', req.url);
   console.log('Headers:', req.headers);
+  console.log('Cookies:', req.cookies);
   
   next();
 });
@@ -150,7 +151,7 @@ app.use(helmet({
       frameSrc: ["'none'"],
     },
   },
-  crossOriginResourcePolicy: { policy: "same-site" },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   crossOriginOpenerPolicy: { policy: "same-origin" },
   crossOriginEmbedderPolicy: { policy: "require-corp" },
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },

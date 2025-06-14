@@ -202,28 +202,34 @@ class AuthController {
         return;
       }
 
-      const { accessToken, refreshToken } = this.generateTokens(user.id, user.isAdmin);
+      const { accessToken, refreshToken } = this.generateTokens(user.id, true);
+      console.log('Token gerado com sucesso');
+
+      // Salvar refresh token
       await this.saveRefreshToken(user.id, refreshToken);
-      
-      // Configurar os cookies HTTP-only
+
+      // Configurar cookie com o token
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 15 * 60 * 1000, // 15 minutos
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        sameSite: 'none',
+        maxAge: 15 * 60 * 1000 // 15 minutos
       });
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
       });
-      
-      res.status(200).json({ 
-        user: { id: user.id, email: user.email, isAdmin: user.isAdmin } 
+
+      res.status(200).json({
+        message: "Login realizado com sucesso",
+        user: {
+          id: user.id,
+          email: user.email,
+          isAdmin: true
+        }
       });
     } catch (error) {
       console.error("Erro ao fazer login:", error);
@@ -372,9 +378,8 @@ class AuthController {
       
       if (!patient) {
         console.log('Paciente não encontrado');
-        const error = new Error("Credenciais inválidas") as CustomError;
-        error.statusCode = 401;
-        return next(error);
+        res.status(401).json({ error: "Credenciais inválidas" });
+        return;
       }
 
       if (!patient.isEmailVerified) {
@@ -391,26 +396,43 @@ class AuthController {
       
       if (!passwordMatch) {
         console.log('Senha incorreta');
-        const error = new Error("Credenciais inválidas") as CustomError;
-        error.statusCode = 401;
-        return next(error);
+        res.status(401).json({ error: "Credenciais inválidas" });
+        return;
       }
 
-      const token = jwt.sign({ patientId: patient.id, isAdmin: false }, jwtSecret, { expiresIn: "1h" });
+      const { accessToken, refreshToken } = this.generateTokens(patient.id, false);
       console.log('Token gerado com sucesso');
-      
-      // Configurar o cookie HTTP-only
-      res.cookie('token', token, {
+
+      // Salvar refresh token
+      await this.saveRefreshToken(patient.id, refreshToken);
+
+      // Configurar cookie com o token
+      res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        sameSite: 'none',
+        maxAge: 15 * 60 * 1000 // 15 minutos
       });
-      
-      res.status(200).json({ token, patientId: patient.id, message: "Login realizado com sucesso" });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
+      });
+
+      res.status(200).json({
+        message: "Login realizado com sucesso",
+        user: {
+          id: patient.id,
+          email: patient.email,
+          name: patient.name,
+          isAdmin: false
+        }
+      });
     } catch (error) {
-      console.error("Erro ao fazer login do paciente:", error);
-      return next(error);
+      console.error("Erro ao fazer login:", error);
+      res.status(500).json({ error: "Erro ao fazer login" });
     }
   }
 

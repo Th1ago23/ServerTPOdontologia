@@ -178,6 +178,7 @@ class AuthController {
 
   async registerPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      console.log('Iniciando registro de paciente:', req.body);
       const { name, email, cpf, phone, birthDate, address, city, state, zipCode, country, password, number, complement } = req.body;
 
       // Validação dos campos obrigatórios
@@ -185,6 +186,7 @@ class AuthController {
       const missingFields = requiredFields.filter(field => !req.body[field]);
       
       if (missingFields.length > 0) {
+        console.log('Campos obrigatórios faltando:', missingFields);
         const error = new Error(`Campos obrigatórios faltando: ${missingFields.join(', ')}`) as CustomError;
         error.statusCode = 400;
         return next(error);
@@ -193,6 +195,7 @@ class AuthController {
       // Validação de formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
+        console.log('Email inválido:', email);
         const error = new Error("Formato de email inválido") as CustomError;
         error.statusCode = 400;
         return next(error);
@@ -201,6 +204,7 @@ class AuthController {
       // Validação de CPF (apenas formato básico)
       const cpfRegex = /^\d{11}$/;
       if (!cpfRegex.test(cpf.replace(/\D/g, ""))) {
+        console.log('CPF inválido:', cpf);
         const error = new Error("CPF inválido") as CustomError;
         error.statusCode = 400;
         return next(error);
@@ -209,28 +213,35 @@ class AuthController {
       // Validação de telefone
       const phoneRegex = /^\d{10,11}$/;
       if (!phoneRegex.test(phone.replace(/\D/g, ""))) {
+        console.log('Telefone inválido:', phone);
         const error = new Error("Telefone inválido") as CustomError;
         error.statusCode = 400;
         return next(error);
       }
   
       // Verificações de duplicidade
+      console.log('Verificando duplicidade de email:', email);
       const existingPatientByEmail = await prisma.patient.findUnique({ where: { email } });
       if (existingPatientByEmail) {
+        console.log('Email já cadastrado:', email);
         const error = new Error("Paciente com este e-mail já cadastrado") as CustomError;
         error.statusCode = 400;
         return next(error);
       }
   
+      console.log('Verificando duplicidade de CPF:', cpf);
       const existingPatientByCpf = await prisma.patient.findUnique({ where: { cpf } });
       if (existingPatientByCpf) {
+        console.log('CPF já cadastrado:', cpf);
         const error = new Error("Paciente com este CPF já cadastrado") as CustomError;
         error.statusCode = 400;
         return next(error);
       }
   
+      console.log('Verificando duplicidade de telefone:', phone);
       const existingPatientByPhone = await prisma.patient.findUnique({ where: { phone } });
       if (existingPatientByPhone) {
+        console.log('Telefone já cadastrado:', phone);
         const error = new Error("Paciente com este número de telefone já cadastrado") as CustomError;
         error.statusCode = 400;
         return next(error);
@@ -241,51 +252,53 @@ class AuthController {
       const expiresAt = new Date(Date.now() + 3600000); // 1 hora
 
       // Criação do paciente
+      console.log('Criando novo paciente...');
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       
-      // Primeiro criar o paciente
-      const patient = await prisma.patient.create({
-        data: {
-          name,
-          email,
-          cpf,
-          phone,
-          birthDate: new Date(birthDate),
-          address,
-          number,
-          complement: complement || "",
-          city,
-          state,
-          zipCode,
-          country: country || "Brasil",
-          password: hashedPassword,
-          isEmailVerified: false,
-          emailVerificationCode: code,
-          emailVerificationExpires: expiresAt
-        },
-      });
-
-      // Depois atualizar com o código de verificação
-      await prisma.patient.update({
-        where: { id: patient.id },
-        data: {
-          emailVerificationCode: code,
-          emailVerificationExpires: expiresAt
-        }
-      });
-
       try {
-        // Enviar email de verificação
-        await sendVerificationEmail(email, code);
-      } catch (emailError) {
-        console.error("Erro ao enviar email de verificação:", emailError);
-        // Não interrompe o fluxo se o email falhar
+        const patient = await prisma.patient.create({
+          data: {
+            name,
+            email,
+            cpf,
+            phone,
+            birthDate: new Date(birthDate),
+            address,
+            number,
+            complement: complement || "",
+            city,
+            state,
+            zipCode,
+            country: country || "Brasil",
+            password: hashedPassword,
+            isEmailVerified: false,
+            emailVerificationCode: code,
+            emailVerificationExpires: expiresAt
+          },
+        });
+
+        console.log('Paciente criado com sucesso:', patient.id);
+
+        try {
+          // Enviar email de verificação
+          console.log('Enviando email de verificação...');
+          await sendVerificationEmail(email, code);
+          console.log('Email de verificação enviado com sucesso');
+        } catch (emailError) {
+          console.error("Erro ao enviar email de verificação:", emailError);
+          // Não interrompe o fluxo se o email falhar
+        }
+    
+        res.status(201).json({
+          message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",
+          patientId: patient.id,
+        });
+      } catch (dbError) {
+        console.error("Erro ao criar paciente no banco de dados:", dbError);
+        const error = new Error("Erro ao criar paciente no banco de dados") as CustomError;
+        error.statusCode = 500;
+        return next(error);
       }
-  
-      res.status(201).json({
-        message: "Paciente registrado com sucesso. Por favor, verifique seu e-mail.",
-        patientId: patient.id,
-      });
     } catch (error) {
       console.error("Erro ao registrar paciente:", error);
       if (error instanceof Error) {

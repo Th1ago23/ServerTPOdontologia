@@ -15,7 +15,7 @@ export const authenticateToken: RequestHandler = async (
   next: NextFunction
 ): Promise<void> => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1] || req.cookies?.token;
+  const token = authHeader && authHeader.split(" ")[1] || req.cookies?.accessToken;
 
   if (token == null) {
     res.status(401).json({ error: "Não autorizado" });
@@ -33,7 +33,7 @@ export const authenticateToken: RequestHandler = async (
       (req as AuthRequest).isAdmin = decoded.isAdmin;
       (req as AuthRequest).userType = 'admin';
     } else if (decoded.patientId) {
-      (req as AuthRequest).patientId = decoded.patientId; // Mantém patientId separado
+      (req as AuthRequest).patientId = decoded.patientId;
       (req as AuthRequest).isAdmin = false;
       (req as AuthRequest).userType = 'patient';
     }

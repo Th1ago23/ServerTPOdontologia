@@ -12,12 +12,4 @@ router.post("/logout", authController.logout.bind(authController));
 router.post("/refresh-token", authController.refreshToken.bind(authController));
 router.get("/me", authenticateToken, authController.me.bind(authController));
 
-router.post('/register', AuthController.registerUser);
-router.post('/login', AuthController.loginUser);
-router.post('/verify-email', AuthController.verifyEmail);
-router.post('/resend-verification', AuthController.resendVerificationCode);
-router.post("/logout", AuthController.logout);
-router.post("/refresh-token", AuthController.refreshToken);
-router.get("/me", authenticateToken, AuthController.me);
-
 export default router;

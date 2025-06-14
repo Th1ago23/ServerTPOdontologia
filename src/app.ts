@@ -159,7 +159,6 @@ app.use(helmet({
     includeSubDomains: true,
     preload: true
   },
-  xContentTypeOptions: true,
   xFrameOptions: { action: "deny" },
   xXssProtection: true,
   noSniff: true,
@@ -175,7 +174,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.use(limiter);
+// Aplicar rate limiters específicos
+app.use('/api/auth', authLimiter);
+app.use('/api', apiLimiter);
+app.use('/', defaultLimiter);
+
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -208,11 +211,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   console.log('Cookies:', req.cookies);
   next();
 });
-
-// Aplicar rate limiters específicos
-app.use('/api/auth', authLimiter);
-app.use('/api', apiLimiter);
-app.use('/', defaultLimiter);
 
 // Rota raiz
 app.get('/', (req, res) => {

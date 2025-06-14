@@ -1,10 +1,9 @@
 import express from 'express';
-import AuthController from "../controllers/AuthController";
+import authController from "../controllers/AuthController";
 import AppointmentRequestController from "../controllers/AppointmentRequestController";
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = express.Router();
-const authController = new AuthController();
 
 router.post('/register', authController.registerPatient.bind(authController));
 router.post('/login', authController.loginPatient.bind(authController));

@@ -186,7 +186,7 @@ app.use('/', defaultLimiter);
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
 // Middleware de logging
 app.use((req: Request, res: Response, next: NextFunction) => {

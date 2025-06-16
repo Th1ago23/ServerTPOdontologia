@@ -155,14 +155,16 @@ describe('Auth Controller', () => {
         .post('/api/auth/login')
         .send({ email: testUser.email, password: 'testpassword' });
       const cookies = loginResponse.headers['set-cookie'];
-      await generateVerificationCode(testUser.email, false);
-      // Expira o código manualmente
+      const code = generateVerificationCode();
       await prisma.user.update({
         where: { email: testUser.email },
-        data: { emailVerificationExpires: new Date(Date.now() - 3600000) },
+        data: {
+          emailVerificationCode: code,
+          emailVerificationExpires: new Date(Date.now() - 3600000)
+        }
       });
       const userInDb = await prisma.user.findUnique({ where: { email: testUser.email } });
-      const code = userInDb?.emailVerificationCode;
+      const storedCode = userInDb?.emailVerificationCode;
       const response = await request(app)
         .post('/api/auth/verify-email')
         .set('Cookie', cookies)

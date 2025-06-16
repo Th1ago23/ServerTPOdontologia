@@ -24,7 +24,8 @@ describe('Fluxo completo do backend', () => {
   it('Deve cadastrar um novo paciente', async () => {
     const res = await request(app)
       .post('/api/patients/register')
-      .send(patientData);
+      .send(patientData)
+      .redirects(1);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
     patientId = res.body.id;
@@ -33,7 +34,8 @@ describe('Fluxo completo do backend', () => {
   it('Deve fazer login do paciente', async () => {
     const res = await request(app)
       .post('/api/auth-patient/login')
-      .send({ email: patientData.email, password: patientData.password });
+      .send({ email: patientData.email, password: patientData.password })
+      .redirects(1);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
     patientToken = res.body.accessToken;
@@ -42,7 +44,8 @@ describe('Fluxo completo do backend', () => {
   it('Deve fazer login do admin', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send(adminData);
+      .send(adminData)
+      .redirects(1);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
     adminToken = res.body.accessToken;
@@ -55,7 +58,8 @@ describe('Fluxo completo do backend', () => {
       .send({
         date: '2025-12-01T10:00:00.000Z',
         description: 'Consulta de teste'
-      });
+      })
+      .redirects(1);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id');
     appointmentRequestId = res.body.id;
@@ -64,7 +68,8 @@ describe('Fluxo completo do backend', () => {
   it('Paciente deve listar suas solicitações de agendamento', async () => {
     const res = await request(app)
       .get('/api/appointment-requests')
-      .set('Cookie', [`accessToken=${patientToken}`]);
+      .set('Cookie', [`accessToken=${patientToken}`])
+      .redirects(1);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
@@ -72,7 +77,8 @@ describe('Fluxo completo do backend', () => {
   it('Admin deve aprovar a solicitação de agendamento', async () => {
     const res = await request(app)
       .patch(`/api/appointments/${appointmentRequestId}/approve`)
-      .set('Cookie', [`accessToken=${adminToken}`]);
+      .set('Cookie', [`accessToken=${adminToken}`])
+      .redirects(1);
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('APPROVED');
   });
@@ -80,7 +86,8 @@ describe('Fluxo completo do backend', () => {
   it('Paciente deve ver o histórico de consultas', async () => {
     const res = await request(app)
       .get(`/api/appointments/history/${patientId}`)
-      .set('Cookie', [`accessToken=${patientToken}`]);
+      .set('Cookie', [`accessToken=${patientToken}`])
+      .redirects(1);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });

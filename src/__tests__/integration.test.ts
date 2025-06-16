@@ -1,11 +1,33 @@
 import request from 'supertest';
 import {app} from '../app';
+import { prisma } from './setup';
 
 describe('Fluxo completo do backend', () => {
   let patientToken: string;
   let adminToken: string;
   let appointmentRequestId: number;
   let patientId: number;
+
+  beforeAll(async () => {
+    try {
+      await prisma.patient.deleteMany();
+      await prisma.user.deleteMany();
+      await prisma.appointmentRequest.deleteMany();
+    } catch (error) {
+      console.error('Erro ao limpar banco de dados:', error);
+    }
+  });
+
+  afterAll(async () => {
+    try {
+      await prisma.patient.deleteMany();
+      await prisma.user.deleteMany();
+      await prisma.appointmentRequest.deleteMany();
+      await prisma.$disconnect();
+    } catch (error) {
+      console.error('Erro ao limpar banco de dados:', error);
+    }
+  });
 
   const patientData = {
     name: 'Paciente Teste',

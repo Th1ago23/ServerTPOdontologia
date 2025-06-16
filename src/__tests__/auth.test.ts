@@ -1,19 +1,28 @@
 import request from 'supertest';
 import { app } from '../app';
-import { clearDatabase, prisma, createTestUser, createTestPatient } from '../tests/utils';
+import { prisma } from './setup';
+import { clearDatabase, createTestUser, createTestPatient } from '../tests/utils';
 import { generateVerificationCode } from '../services/verificationService';
 import bcrypt from 'bcryptjs';
 
 // Hooks globais
 beforeAll(async () => {
-  await prisma.patient.deleteMany();
-  await prisma.user.deleteMany();
+  try {
+    await prisma.patient.deleteMany();
+    await prisma.user.deleteMany();
+  } catch (error) {
+    console.error('Erro ao limpar banco de dados:', error);
+  }
 });
 
 afterAll(async () => {
-  await prisma.patient.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.$disconnect();
+  try {
+    await prisma.patient.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Erro ao limpar banco de dados:', error);
+  }
 });
 
 describe('Auth Controller', () => {

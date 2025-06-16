@@ -4,7 +4,7 @@ import authRoutes from './authRoutes';
 import authPatientRoutes from './authPatientRoutes';
 import adminRoutes from './adminRoutes';
 import contactRoutes from './contactRoutes';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, authenticatePatient, authenticateAdmin } from '../middleware/authMiddleware';
 import AuthController from '../controllers/AuthController';
 import AppointmentRequestController from '../controllers/AppointmentRequestController';
 import AppointmentManagementController from '../controllers/AppointmentManagementController';
@@ -27,14 +27,12 @@ router.use('/contact', contactRoutes);
 // Info do usuário autenticado
 router.get('/me', authenticateToken, AuthController.me);
 
-// Criar uma nova solicitação de consulta
-router.post('/appointment-requests', authenticateToken, AppointmentRequestController.create.bind(AppointmentRequestController));
+// Rotas de agendamento (requer autenticação de paciente)
+router.post('/appointment-requests', authenticateToken, authenticatePatient, AppointmentRequestController.create.bind(AppointmentRequestController));
+router.get('/appointment-requests', authenticateToken, authenticatePatient, AppointmentRequestController.listPatientAppointments.bind(AppointmentRequestController));
 
-// Listar consultas do paciente
-router.get('/appointment-requests', authenticateToken, AppointmentRequestController.listPatientAppointments.bind(AppointmentRequestController));
-
-// Histórico de consultas do paciente
-router.get('/appointments/history/:patientId', authenticateToken, AppointmentManagementController.getAppointmentHistory.bind(AppointmentManagementController));
+// Rotas de histórico de consultas
+router.get('/appointments/history/:patientId', authenticateToken, authenticatePatient, AppointmentManagementController.getAppointmentHistory.bind(AppointmentManagementController));
 
 // Rota de teste da API
 router.get('/test-api', (req, res) => {

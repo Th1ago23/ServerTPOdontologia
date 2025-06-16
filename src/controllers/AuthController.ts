@@ -21,15 +21,15 @@ interface AuthRequest extends Request {
 }
 
 class AuthController {
-  private generateTokens(userId: number, isAdmin: boolean) {
+  private generateTokens(userId: number, isAdmin: boolean, patientId?: number) {
     const accessToken = jwt.sign(
-      { userId, isAdmin },
+      { userId, isAdmin, patientId },
       jwtSecret,
       { expiresIn: "15m" }
     );
 
     const refreshToken = jwt.sign(
-      { userId, isAdmin },
+      { userId, isAdmin, patientId },
       refreshTokenSecret,
       { expiresIn: "7d" }
     );
@@ -174,7 +174,7 @@ class AuthController {
   async loginUser(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
-      console.log('Tentativa de login:', { email });
+      console.log('Tentativa de login admin:', { email });
       
       const user = await prisma.user.findUnique({ where: { email } });
       console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
@@ -369,7 +369,7 @@ class AuthController {
     }
   }
 
-  async loginPatient(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async loginPatient(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
       console.log('Tentativa de login paciente:', { email });
@@ -401,31 +401,33 @@ class AuthController {
         return;
       }
 
-      const { accessToken, refreshToken } = this.generateTokens(patient.id, false);
+      const { accessToken, refreshToken } = this.generateTokens(0, false, patient.id);
+      console.log('Token gerado com sucesso');
+
+      // Salvar refresh token
       await this.saveRefreshToken(null, patient.id, refreshToken);
 
+      // Configurar cookie com o token
       res.cookie('accessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
-        maxAge: 15 * 60 * 1000, // 15 minutos
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        maxAge: 15 * 60 * 1000 // 15 minutos
       });
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
       });
 
       res.status(200).json({
         message: "Login realizado com sucesso",
         user: {
           id: patient.id,
-          name: patient.name,
           email: patient.email,
+          name: patient.name,
           isAdmin: false
         }
       });

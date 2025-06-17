@@ -15,6 +15,7 @@
     "migrate": "prisma migrate deploy",
     "deploy": "prisma migrate deploy && npm run seed",
     "heroku-postbuild": "prisma generate && npm run build",
+    "heroku-postdeploy": "prisma migrate deploy && npm run seed",
     "prisma:generate": "prisma generate"
   },
   "prisma": {

@@ -24,6 +24,7 @@ async function createAdmin() {
       email,
       password: hashedPassword,
       isAdmin: true,
+      isEmailVerified: true, // Email já verificado
     },
   });
 

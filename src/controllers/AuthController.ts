@@ -64,6 +64,24 @@ class AuthController {
     });
   }
 
+  private setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none' as const,
+      maxAge: 15 * 60 * 1000, // 15 minutos para accessToken
+      domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
+    };
+
+    const refreshCookieOptions = {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias para refreshToken
+    };
+
+    res.cookie('accessToken', accessToken, cookieOptions);
+    res.cookie('refreshToken', refreshToken, refreshCookieOptions);
+  }
+
   async registerUser(req: Request, res: Response): Promise<void> {
     try {
       const { email, password } = req.body;
@@ -210,19 +228,7 @@ class AuthController {
       await this.saveRefreshToken(user.id, null, refreshToken);
 
       // Configurar cookie com o token
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 15 * 60 * 1000 // 15 minutos
-      });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
-      });
+      this.setAuthCookies(res, accessToken, refreshToken);
 
       res.status(200).json({
         message: "Login realizado com sucesso",
@@ -408,19 +414,7 @@ class AuthController {
       await this.saveRefreshToken(null, patient.id, refreshToken);
 
       // Configurar cookie com o token
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 15 * 60 * 1000 // 15 minutos
-      });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 dias
-      });
+      this.setAuthCookies(res, accessToken, refreshToken);
 
       res.status(200).json({
         message: "Login realizado com sucesso",
@@ -701,21 +695,7 @@ class AuthController {
       await this.revokeRefreshToken(refreshToken);
       await this.saveRefreshToken(decoded.userId, null, newRefreshToken);
 
-      res.cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 15 * 60 * 1000, // 15 minutos
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
-      });
-
-      res.cookie('refreshToken', newRefreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
-        domain: process.env.NODE_ENV === 'production' ? '.tatianepeixotoodonto.live' : undefined
-      });
+      this.setAuthCookies(res, accessToken, newRefreshToken);
 
       res.status(200).json({ message: "Tokens atualizados com sucesso" });
     } catch (error) {

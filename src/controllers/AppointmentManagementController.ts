@@ -246,8 +246,8 @@ class AppointmentManagementController {
           }
         },
         orderBy: [
-          { date: 'asc' },
-          { time: 'asc' }
+          { requestedDate: 'asc' },
+          { requestedTime: 'asc' }
         ]
       });
 
@@ -263,8 +263,8 @@ class AppointmentManagementController {
         })),
         ...pendingRequests.map(req => ({
           id: req.id,
-          date: req.date,
-          time: req.time,
+          date: req.requestedDate,
+          time: req.requestedTime,
           status: req.status,
           type: 'pending',
           patient: req.patient

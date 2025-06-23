@@ -28,12 +28,12 @@ class AppointmentManagementController {
                 res.status(404).json({ error: "Solicitação não encontrada." });
                 return;
             }
-            const isTimeSlotFree = await this.checkTimeSlotAvailability(appointmentRequest.patientId, appointmentRequest.date, appointmentRequest.time);
+            const isTimeSlotFree = await this.checkTimeSlotAvailability(appointmentRequest.patientId, appointmentRequest.requestedDate, appointmentRequest.requestedTime);
             if (!isTimeSlotFree) {
                 res.status(409).json({ error: "O horário solicitado já está ocupado." });
                 return;
             }
-            const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.date, appointmentRequest.time);
+            const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.requestedDate, appointmentRequest.requestedTime);
             if (!isWithinWorkingHours) {
                 res.status(400).json({ error: "O horário solicitado está fora do horário de funcionamento." });
                 return;
@@ -41,8 +41,8 @@ class AppointmentManagementController {
             const newAppointment = await prisma.appointment.create({
                 data: {
                     patientId: appointmentRequest.patientId,
-                    date: appointmentRequest.date,
-                    time: appointmentRequest.time,
+                    date: appointmentRequest.requestedDate,
+                    time: appointmentRequest.requestedTime,
                     notes: appointmentRequest.notes,
                 },
             });
@@ -52,13 +52,13 @@ class AppointmentManagementController {
             });
             try {
                 await notificationService_1.NotificationService.createAppointmentConfirmation(appointmentRequest.patientId, {
-                    date: appointmentRequest.date,
-                    time: appointmentRequest.time,
+                    date: appointmentRequest.requestedDate,
+                    time: appointmentRequest.requestedTime,
                     notes: appointmentRequest.notes,
                 });
                 await notificationService_1.NotificationService.createAppointmentReminder(appointmentRequest.patientId, {
-                    date: appointmentRequest.date,
-                    time: appointmentRequest.time,
+                    date: appointmentRequest.requestedDate,
+                    time: appointmentRequest.requestedTime,
                     notes: appointmentRequest.notes,
                 });
             }
@@ -92,7 +92,7 @@ class AppointmentManagementController {
                     patientId: appointmentRequest.patientId,
                     type: 'APPOINTMENT_CANCELLED',
                     title: 'Consulta Não Confirmada ❌',
-                    message: `Infelizmente sua solicitação de consulta para ${appointmentRequest.date.toLocaleDateString()} às ${appointmentRequest.time} não pôde ser confirmada.
+                    message: `Infelizmente sua solicitação de consulta para ${appointmentRequest.requestedDate.toLocaleDateString()} às ${appointmentRequest.requestedTime} não pôde ser confirmada.
           
           Procedimento: ${appointmentRequest.notes || 'Não especificado'}
           
@@ -131,11 +131,11 @@ class AppointmentManagementController {
                 res.status(400).json({ error: "O novo horário selecionado está fora do horário de funcionamento." });
                 return;
             }
-            const oldDate = appointmentRequest.date;
-            const oldTime = appointmentRequest.time;
+            const oldDate = appointmentRequest.requestedDate;
+            const oldTime = appointmentRequest.requestedTime;
             await prisma.appointmentRequest.update({
                 where: { id: parseInt(requestId) },
-                data: { date: new Date(newDate), time: newTime, status: client_1.AppointmentStatus.RESCHEDULED },
+                data: { requestedDate: new Date(newDate), requestedTime: newTime, status: client_1.AppointmentStatus.RESCHEDULED },
             });
             try {
                 await notificationService_1.NotificationService.createNotification({
@@ -195,8 +195,8 @@ class AppointmentManagementController {
                     }
                 },
                 orderBy: [
-                    { date: 'asc' },
-                    { time: 'asc' }
+                    { requestedDate: 'asc' },
+                    { requestedTime: 'asc' }
                 ]
             });
             const allAppointments = [
@@ -210,8 +210,8 @@ class AppointmentManagementController {
                 })),
                 ...pendingRequests.map(req => ({
                     id: req.id,
-                    date: req.date,
-                    time: req.time,
+                    date: req.requestedDate,
+                    time: req.requestedTime,
                     status: req.status,
                     type: 'pending',
                     patient: req.patient
@@ -494,8 +494,8 @@ class AppointmentManagementController {
                 const newAppointment = await prisma.appointment.create({
                     data: {
                         patientId: appointmentRequest.patientId,
-                        date: appointmentRequest.date,
-                        time: appointmentRequest.time,
+                        date: appointmentRequest.requestedDate,
+                        time: appointmentRequest.requestedTime,
                         notes: appointmentRequest.notes,
                         status: client_1.AppointmentStatus.CONFIRMED
                     }
@@ -542,8 +542,8 @@ class AppointmentManagementController {
     async checkTimeSlotAvailability(patientId, date, time) {
         const existingAppointment = await prisma.appointment.findFirst({
             where: {
-                date,
-                time,
+                date: date,
+                time: time,
                 patientId
             }
         });

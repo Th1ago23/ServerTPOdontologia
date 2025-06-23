@@ -37,8 +37,8 @@ class AppointmentRequestController {
             const appointmentRequest = await prisma.appointmentRequest.create({
                 data: {
                     patientId: patientId,
-                    date: dateObj,
-                    time,
+                    requestedDate: dateObj,
+                    requestedTime: time,
                     notes,
                     status: client_1.AppointmentStatus.PENDING,
                 },
@@ -83,7 +83,7 @@ class AppointmentRequestController {
                 include: {
                     patient: true,
                 },
-                orderBy: { date: 'asc' },
+                orderBy: { requestedDate: 'asc' },
             });
             console.log("Consultas encontradas (backend):", JSON.stringify(consultas, null, 2));
             console.log("Número de consultas encontradas (backend):", consultas.length);

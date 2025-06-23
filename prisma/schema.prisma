@@ -23,6 +23,7 @@ model Patient {
   state               String
   zipCode             String
   country             String
+  profilePicture      String?              // Caminho da foto de perfil
   isEmailVerified     Boolean             @default(false)
   emailVerificationCode String?
   emailVerificationExpires DateTime?

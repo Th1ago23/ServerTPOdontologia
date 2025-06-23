@@ -15,5 +15,6 @@ router.delete('/:id', authenticateToken, authenticateAdmin, PatientController.de
 // Rotas para o paciente acessar seu próprio perfil
 router.get('/me', authenticateToken, PatientController.getMyProfile);
 router.get('/:id', authenticateToken, PatientController.getById);
+router.put('/me', authenticateToken, PatientController.updateMyProfile);
 
 export default router;

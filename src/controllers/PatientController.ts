@@ -156,6 +156,53 @@ class PatientController {
       res.status(500).json({ error: "Erro ao deletar paciente" });
     }
   }
+
+  async updateMyProfile(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const patientId = req.patientId;
+      if (!patientId) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+      const {
+        name,
+        email,
+        cpf,
+        phone,
+        birthDate,
+        address,
+        city,
+        state,
+        zipCode,
+        country,
+        number,
+        complement
+      } = req.body;
+
+      const updatedPatient = await prisma.patient.update({
+        where: { id: patientId },
+        data: {
+          name,
+          email,
+          cpf,
+          phone,
+          birthDate: birthDate ? new Date(birthDate) : undefined,
+          address,
+          city,
+          state,
+          zipCode,
+          country,
+          number,
+          complement,
+          updatedAt: new Date(),
+        },
+      });
+      res.status(200).json(updatedPatient);
+    } catch (error) {
+      console.error("Erro ao atualizar perfil do paciente:", error);
+      res.status(500).json({ error: "Erro ao atualizar perfil" });
+    }
+  }
 }
 
 export default new PatientController();

@@ -19,16 +19,23 @@ class AppointmentManagementController {
     }
     async listAllAppointmentRequests(req, res) {
         try {
+            console.log('Debug - listAllAppointmentRequests chamado');
+            console.log('Debug - req.userId:', req.userId);
+            console.log('Debug - req.isAdmin:', req.isAdmin);
+            console.log('Debug - req.userType:', req.userType);
             const { status } = req.query;
+            console.log('Debug - status query:', status);
             const whereClause = {};
             if (status && status !== 'all') {
                 whereClause.status = status;
             }
+            console.log('Debug - whereClause:', whereClause);
             const requests = await prisma.appointmentRequest.findMany({
                 where: whereClause,
                 include: { patient: true },
                 orderBy: { requestedDate: 'asc' },
             });
+            console.log('Debug - requests encontradas:', requests.length);
             res.status(200).json(requests);
         }
         catch (error) {
@@ -194,10 +201,7 @@ class AppointmentManagementController {
                         }
                     }
                 },
-                orderBy: [
-                    { date: 'asc' },
-                    { time: 'asc' }
-                ]
+                orderBy: [{ date: 'asc' }, { time: 'asc' }]
             });
             const pendingRequests = await prisma.appointmentRequest.findMany({
                 where: {
@@ -227,7 +231,7 @@ class AppointmentManagementController {
                     type: 'confirmed',
                     patient: apt.patient
                 })),
-                ...pendingRequests.map(req => ({
+                ...pendingRequests.map((req) => ({
                     id: req.id,
                     date: req.requestedDate,
                     time: req.requestedTime,
@@ -272,10 +276,7 @@ class AppointmentManagementController {
                     },
                     appointmentRequests: true
                 },
-                orderBy: [
-                    { date: 'asc' },
-                    { time: 'asc' }
-                ]
+                orderBy: [{ date: 'asc' }, { time: 'asc' }]
             });
             res.status(200).json(appointments);
         }
@@ -302,9 +303,7 @@ class AppointmentManagementController {
                     },
                     appointmentRequests: true
                 },
-                orderBy: {
-                    time: 'asc'
-                }
+                orderBy: [{ date: 'asc' }, { time: 'asc' }]
             });
             res.status(200).json(appointments);
         }

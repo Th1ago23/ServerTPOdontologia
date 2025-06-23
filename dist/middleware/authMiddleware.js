@@ -12,6 +12,9 @@ const authenticateToken = async (req, res, next) => {
     try {
         const authHeader = req.headers["authorization"];
         const token = authHeader && authHeader.split(" ")[1] || ((_a = req.cookies) === null || _a === void 0 ? void 0 : _a.accessToken);
+        console.log('Debug Auth - authHeader:', authHeader);
+        console.log('Debug Auth - cookies:', req.cookies);
+        console.log('Debug Auth - token encontrado:', !!token);
         if (!token) {
             console.log('Token não encontrado');
             res.status(401).json({ error: "Não autorizado" });
@@ -46,10 +49,15 @@ const authenticateToken = async (req, res, next) => {
 };
 exports.authenticateToken = authenticateToken;
 const authenticateAdmin = async (req, res, next) => {
+    console.log('Debug Admin - req.isAdmin:', req.isAdmin);
+    console.log('Debug Admin - req.userType:', req.userType);
+    console.log('Debug Admin - req.userId:', req.userId);
     if (req.isAdmin) {
+        console.log('Debug Admin - Acesso permitido');
         return next();
     }
     else {
+        console.log('Debug Admin - Acesso negado');
         res.status(403).json({ error: "Acesso proibido" });
     }
 };

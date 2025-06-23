@@ -38,7 +38,7 @@ class AppointmentManagementController {
       const requests = await prisma.appointmentRequest.findMany({
         where: whereClause,
         include: { patient: true } as any,
-        orderBy: { requestedDate: 'asc' },
+        orderBy: { requestedDate: 'asc' } as any,
       });
       
       console.log('Debug - requests encontradas:', requests.length);
@@ -153,7 +153,7 @@ class AppointmentManagementController {
           patientId: appointmentRequest.patientId,
           type: 'APPOINTMENT_CANCELLED',
           title: 'Consulta Não Confirmada ❌',
-          message: `Infelizmente sua solicitação de consulta para ${appointmentRequest.requestedDate.toLocaleDateString()} às ${appointmentRequest.requestedTime} não pôde ser confirmada.
+          message: `Infelizmente sua solicitação de consulta para ${(appointmentRequest as any).requestedDate.toLocaleDateString()} às ${(appointmentRequest as any).requestedTime} não pôde ser confirmada.
           
           Procedimento: ${appointmentRequest.notes || 'Não especificado'}
           
@@ -210,7 +210,7 @@ class AppointmentManagementController {
 
       await prisma.appointmentRequest.update({
         where: { id: parseInt(requestId) },
-        data: { requestedDate: new Date(newDate), requestedTime: newTime, status: AppointmentStatus.RESCHEDULED },
+        data: { requestedDate: new Date(newDate), requestedTime: newTime, status: AppointmentStatus.RESCHEDULED } as any,
       });
 
       // Criar notificação de reagendamento
@@ -221,7 +221,7 @@ class AppointmentManagementController {
           title: 'Consulta Reagendada! 📅',
           message: `Sua consulta foi reagendada com sucesso!
           
-          Data anterior: ${oldDate.toLocaleDateString()} às ${oldTime}
+          Data anterior: ${(oldDate as any).toLocaleDateString()} às ${oldTime}
           Nova data: ${new Date(newDate).toLocaleDateString()} às ${newTime}
           
           Procedimento: ${appointmentRequest.notes || 'Não especificado'}
@@ -271,8 +271,11 @@ class AppointmentManagementController {
               phone: true
             }
           }
-        },
-        orderBy: [{ date: 'asc' }, { time: 'asc' }]
+        } as any,
+        orderBy: [
+          { requestedDate: 'asc' } as any,
+          { requestedTime: 'asc' } as any
+        ]
       });
 
       // Combinar os resultados
@@ -285,7 +288,7 @@ class AppointmentManagementController {
           type: 'confirmed',
           patient: apt.patient
         })),
-        ...pendingRequests.map(req => ({
+        ...pendingRequests.map((req: any) => ({
           id: req.id,
           date: req.requestedDate,
           time: req.requestedTime,
@@ -606,10 +609,10 @@ class AppointmentManagementController {
         // Se for uma solicitação pendente, criar um novo agendamento
         const newAppointment = await prisma.appointment.create({
           data: {
-            patientId: appointmentRequest.patientId,
-            date: appointmentRequest.requestedDate,
-            time: appointmentRequest.requestedTime,
-            notes: appointmentRequest.notes,
+            patientId: (appointmentRequest as any).patientId,
+            date: (appointmentRequest as any).requestedDate,
+            time: (appointmentRequest as any).requestedTime,
+            notes: (appointmentRequest as any).notes,
             status: AppointmentStatus.CONFIRMED
           }
         });

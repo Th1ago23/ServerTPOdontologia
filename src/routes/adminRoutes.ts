@@ -15,6 +15,7 @@ router.get("/appointments/patient/:patientId/history", AppointmentManagementCont
 router.get("/appointments/available-slots/:date", AppointmentManagementController.getAvailableTimeSlots);
 
 // Rotas de gerenciamento de solicitações
+router.get("/appointment-requests", AppointmentManagementController.listAllAppointmentRequests.bind(AppointmentManagementController));
 router.get("/requests/pending", AppointmentManagementController.listPending);
 router.post("/requests/:requestId/approve", AppointmentManagementController.approve);
 router.post("/requests/:requestId/reject", AppointmentManagementController.reject);

@@ -17,6 +17,25 @@ class AppointmentManagementController {
             res.status(500).json({ error: "Erro ao listar solicitações pendentes." });
         }
     }
+    async listAllAppointmentRequests(req, res) {
+        try {
+            const { status } = req.query;
+            const whereClause = {};
+            if (status && status !== 'all') {
+                whereClause.status = status;
+            }
+            const requests = await prisma.appointmentRequest.findMany({
+                where: whereClause,
+                include: { patient: true },
+                orderBy: { requestedDate: 'asc' },
+            });
+            res.status(200).json(requests);
+        }
+        catch (error) {
+            console.error("Erro ao listar solicitações de consulta:", error);
+            res.status(500).json({ error: "Erro ao listar solicitações de consulta." });
+        }
+    }
     async approve(req, res) {
         try {
             const { requestId } = req.params;

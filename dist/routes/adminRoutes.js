@@ -13,6 +13,7 @@ router.get("/appointments/status/:status", AppointmentManagementController_1.def
 router.get("/appointments/date/:date", AppointmentManagementController_1.default.listAppointmentsByDate);
 router.get("/appointments/patient/:patientId/history", AppointmentManagementController_1.default.getAppointmentHistory);
 router.get("/appointments/available-slots/:date", AppointmentManagementController_1.default.getAvailableTimeSlots);
+router.get("/appointment-requests", AppointmentManagementController_1.default.listAllAppointmentRequests.bind(AppointmentManagementController_1.default));
 router.get("/requests/pending", AppointmentManagementController_1.default.listPending);
 router.post("/requests/:requestId/approve", AppointmentManagementController_1.default.approve);
 router.post("/requests/:requestId/reject", AppointmentManagementController_1.default.reject);

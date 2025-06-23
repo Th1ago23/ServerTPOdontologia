@@ -21,6 +21,10 @@ export const authenticateToken: RequestHandler = async (
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1] || req.cookies?.accessToken;
 
+    console.log('Debug Auth - authHeader:', authHeader);
+    console.log('Debug Auth - cookies:', req.cookies);
+    console.log('Debug Auth - token encontrado:', !!token);
+
     if (!token) {
       console.log('Token não encontrado');
       res.status(401).json({ error: "Não autorizado" });
@@ -63,9 +67,15 @@ export const authenticateAdmin: RequestHandler = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
+  console.log('Debug Admin - req.isAdmin:', req.isAdmin);
+  console.log('Debug Admin - req.userType:', req.userType);
+  console.log('Debug Admin - req.userId:', req.userId);
+  
   if (req.isAdmin) {
+    console.log('Debug Admin - Acesso permitido');
     return next();
   } else {
+    console.log('Debug Admin - Acesso negado');
     res.status(403).json({ error: "Acesso proibido" });
   }
 };

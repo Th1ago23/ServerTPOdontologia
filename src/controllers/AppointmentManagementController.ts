@@ -423,6 +423,41 @@ class AppointmentManagementController {
     }
   }
 
+  async getMyAppointmentHistory(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const authenticatedPatientId = req.patientId;
+
+      // Verifica se o paciente está autenticado
+      if (!authenticatedPatientId) {
+        res.status(401).json({ message: 'Não autorizado' });
+        return;
+      }
+
+      // Busca o histórico de consultas do paciente autenticado
+      const appointments = await prisma.appointment.findMany({
+        where: {
+          patientId: authenticatedPatientId,
+          status: AppointmentStatus.CONFIRMED
+        },
+        orderBy: {
+          date: 'desc'
+        },
+        include: {
+          appointmentRequests: {
+            select: {
+              notes: true
+            }
+          }
+        }
+      });
+
+      res.status(200).json(appointments);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de consultas:', error);
+      res.status(500).json({ message: 'Erro ao buscar histórico de consultas' });
+    }
+  }
+
   async getAvailableTimeSlots(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { date } = req.params;

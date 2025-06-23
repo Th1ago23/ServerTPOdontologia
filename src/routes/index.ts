@@ -33,6 +33,7 @@ router.get('/appointment-requests', authenticateToken, authenticatePatient, Appo
 
 // Rotas de histórico de consultas
 router.get('/appointments/history/:patientId', authenticateToken, authenticatePatient, AppointmentManagementController.getAppointmentHistory.bind(AppointmentManagementController));
+router.get('/appointments/history', authenticateToken, authenticatePatient, AppointmentManagementController.getMyAppointmentHistory.bind(AppointmentManagementController));
 
 // Rota de teste da API
 router.get('/test-api', (req, res) => {

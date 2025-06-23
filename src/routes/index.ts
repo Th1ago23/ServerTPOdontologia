@@ -4,7 +4,6 @@ import authRoutes from './authRoutes';
 import authPatientRoutes from './authPatientRoutes';
 import adminRoutes from './adminRoutes';
 import contactRoutes from './contactRoutes';
-import notificationRoutes from './notificationRoutes';
 import { authenticateToken, authenticatePatient, authenticateAdmin } from '../middleware/authMiddleware';
 import AuthController from '../controllers/AuthController';
 import AppointmentRequestController from '../controllers/AppointmentRequestController';
@@ -19,9 +18,6 @@ router.use('/auth-patient', authPatientRoutes);
 // Rotas de pacientes
 router.use('/patients', patientRoutes);
 
-// Rotas de notificações
-router.use('/notifications', notificationRoutes);
-
 // Rotas de administração
 router.use('/admin', adminRoutes);
 
@@ -29,7 +25,7 @@ router.use('/admin', adminRoutes);
 router.use('/contact', contactRoutes);
 
 // Info do usuário autenticado
-router.get('/me', authenticateToken, AuthController.me);
+router.get('/me', authenticateToken, AuthController.me.bind(AuthController));
 
 // Rotas de agendamento (requer autenticação de paciente)
 router.post('/appointment-requests', authenticateToken, authenticatePatient, AppointmentRequestController.create.bind(AppointmentRequestController));

@@ -80,10 +80,14 @@ model AppointmentRequest {
   patient       Patient          @relation(fields: [patientId], references: [id], name: "PatientToAppointmentRequest")
   doctorId      Int?
   doctor        Doctor?          @relation(fields: [doctorId], references: [id])
-  date          DateTime
-  time          String
+  requestedDate DateTime
+  requestedTime String
   notes         String?
   status        AppointmentStatus @default(PENDING)
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+  rescheduledAt DateTime?
+  completedAt   DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   appointmentId Int?              @unique

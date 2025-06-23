@@ -254,10 +254,7 @@ class AppointmentManagementController {
             }
           }
         },
-        orderBy: [
-          { date: 'asc' },
-          { time: 'asc' }
-        ]
+        orderBy: [{ date: 'asc' }, { time: 'asc' }]
       });
 
       // Buscar solicitações pendentes
@@ -275,10 +272,7 @@ class AppointmentManagementController {
             }
           }
         },
-        orderBy: [
-          { requestedDate: 'asc' },
-          { requestedTime: 'asc' }
-        ]
+        orderBy: [{ date: 'asc' }, { time: 'asc' }]
       });
 
       // Combinar os resultados
@@ -337,10 +331,7 @@ class AppointmentManagementController {
           },
           appointmentRequests: true
         },
-        orderBy: [
-          { requestedDate: 'asc' },
-          { requestedTime: 'asc' }
-        ]
+        orderBy: [{ date: 'asc' }, { time: 'asc' }]
       });
       res.status(200).json(appointments);
     } catch (error) {
@@ -367,9 +358,7 @@ class AppointmentManagementController {
           },
           appointmentRequests: true
         },
-        orderBy: {
-          time: 'asc'
-        }
+        orderBy: [{ date: 'asc' }, { time: 'asc' }]
       });
       res.status(200).json(appointments);
     } catch (error) {

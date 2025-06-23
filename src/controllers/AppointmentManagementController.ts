@@ -36,15 +36,15 @@ class AppointmentManagementController {
 
       const isTimeSlotFree = await this.checkTimeSlotAvailability(
         appointmentRequest.patientId,
-        appointmentRequest.date,
-        appointmentRequest.time
+        appointmentRequest.requestedDate,
+        appointmentRequest.requestedTime
       );
       if (!isTimeSlotFree) {
         res.status(409).json({ error: "O horário solicitado já está ocupado." });
         return;
       }
 
-      const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.date, appointmentRequest.time);
+      const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.requestedDate, appointmentRequest.requestedTime);
       if (!isWithinWorkingHours) {
         res.status(400).json({ error: "O horário solicitado está fora do horário de funcionamento." });
         return;
@@ -54,8 +54,8 @@ class AppointmentManagementController {
       const newAppointment = await prisma.appointment.create({
         data: {
           patientId: appointmentRequest.patientId,
-          date: appointmentRequest.date,
-          time: appointmentRequest.time,
+          date: appointmentRequest.requestedDate,
+          time: appointmentRequest.requestedTime,
           notes: appointmentRequest.notes,
         },
       });
@@ -71,8 +71,8 @@ class AppointmentManagementController {
         await NotificationService.createAppointmentConfirmation(
           appointmentRequest.patientId,
           {
-            date: appointmentRequest.date,
-            time: appointmentRequest.time,
+            date: appointmentRequest.requestedDate,
+            time: appointmentRequest.requestedTime,
             notes: appointmentRequest.notes,
           }
         );
@@ -81,8 +81,8 @@ class AppointmentManagementController {
         await NotificationService.createAppointmentReminder(
           appointmentRequest.patientId,
           {
-            date: appointmentRequest.date,
-            time: appointmentRequest.time,
+            date: appointmentRequest.requestedDate,
+            time: appointmentRequest.requestedTime,
             notes: appointmentRequest.notes,
           }
         );
@@ -123,7 +123,7 @@ class AppointmentManagementController {
           patientId: appointmentRequest.patientId,
           type: 'APPOINTMENT_CANCELLED',
           title: 'Consulta Não Confirmada ❌',
-          message: `Infelizmente sua solicitação de consulta para ${appointmentRequest.date.toLocaleDateString()} às ${appointmentRequest.time} não pôde ser confirmada.
+          message: `Infelizmente sua solicitação de consulta para ${appointmentRequest.requestedDate.toLocaleDateString()} às ${appointmentRequest.requestedTime} não pôde ser confirmada.
           
           Procedimento: ${appointmentRequest.notes || 'Não especificado'}
           
@@ -175,12 +175,12 @@ class AppointmentManagementController {
         return;
       }
 
-      const oldDate = appointmentRequest.date;
-      const oldTime = appointmentRequest.time;
+      const oldDate = appointmentRequest.requestedDate;
+      const oldTime = appointmentRequest.requestedTime;
 
       await prisma.appointmentRequest.update({
         where: { id: parseInt(requestId) },
-        data: { date: new Date(newDate), time: newTime, status: AppointmentStatus.RESCHEDULED },
+        data: { requestedDate: new Date(newDate), requestedTime: newTime, status: AppointmentStatus.RESCHEDULED },
       });
 
       // Criar notificação de reagendamento
@@ -588,8 +588,8 @@ class AppointmentManagementController {
         const newAppointment = await prisma.appointment.create({
           data: {
             patientId: appointmentRequest.patientId,
-            date: appointmentRequest.date,
-            time: appointmentRequest.time,
+            date: appointmentRequest.requestedDate,
+            time: appointmentRequest.requestedTime,
             notes: appointmentRequest.notes,
             status: AppointmentStatus.CONFIRMED
           }
@@ -647,8 +647,8 @@ class AppointmentManagementController {
   private async checkTimeSlotAvailability(patientId: number, date: Date, time: string): Promise<boolean> {
     const existingAppointment = await prisma.appointment.findFirst({
       where: {
-        date,
-        time,
+        date: date,
+        time: time,
         patientId
       }
     });

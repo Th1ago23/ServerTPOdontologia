@@ -435,26 +435,53 @@ class AuthController {
 
   async me(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.userId) {
-        res.status(401).json({ error: "Não autorizado" });
-        return;
-      }
+      console.log('Debug me - userId:', req.userId, 'patientId:', req.patientId, 'isAdmin:', req.isAdmin);
+      
+      // Se for paciente
+      if (req.patientId) {
+        const patient = await prisma.patient.findUnique({
+          where: { id: req.patientId },
+          select: {
+            id: true,
+            email: true,
+            name: true
+          }
+        });
 
-      const user = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: {
-          id: true,
-          email: true,
-          isAdmin: true
+        if (!patient) {
+          res.status(404).json({ error: "Paciente não encontrado" });
+          return;
         }
-      });
 
-      if (!user) {
-        res.status(404).json({ error: "Usuário não encontrado" });
+        res.status(200).json({
+          ...patient,
+          isAdmin: false
+        });
         return;
       }
 
-      res.status(200).json(user);
+      // Se for admin
+      if (req.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: req.userId },
+          select: {
+            id: true,
+            email: true,
+            isAdmin: true
+          }
+        });
+
+        if (!user) {
+          res.status(404).json({ error: "Usuário não encontrado" });
+          return;
+        }
+
+        res.status(200).json(user);
+        return;
+      }
+
+      // Se não tiver nem userId nem patientId
+      res.status(401).json({ error: "Não autorizado" });
     } catch (error) {
       console.error("Erro ao buscar usuário:", error);
       res.status(500).json({ error: "Erro ao buscar usuário" });

@@ -232,6 +232,7 @@ class AuthController {
 
       res.status(200).json({
         message: "Login realizado com sucesso",
+        accessToken,
         user: {
           id: user.id,
           email: user.email,
@@ -418,6 +419,7 @@ class AuthController {
 
       res.status(200).json({
         message: "Login realizado com sucesso",
+        accessToken,
         user: {
           id: patient.id,
           email: patient.email,

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
+const notificationService_1 = require("../services/notificationService");
 const prisma = new client_1.PrismaClient();
 class AppointmentRequestController {
     async create(req, res) {
@@ -42,6 +43,21 @@ class AppointmentRequestController {
                     status: client_1.AppointmentStatus.PENDING,
                 },
             });
+            try {
+                await notificationService_1.NotificationService.createNotification({
+                    patientId,
+                    type: 'GENERAL',
+                    title: 'Solicitação de Consulta Enviada! 📋',
+                    message: `Sua solicitação de consulta para ${dateObj.toLocaleDateString()} às ${time} foi enviada com sucesso.
+          
+          Procedimento: ${notes || 'Não especificado'}
+          
+          Aguardamos a confirmação da Dra. Tatiane. Você receberá uma notificação assim que for confirmada!`,
+                });
+            }
+            catch (notificationError) {
+                console.error("Erro ao criar notificação:", notificationError);
+            }
             console.log("Consulta criada com sucesso:", appointmentRequest);
             res.status(201).json(appointmentRequest);
         }
@@ -79,10 +95,10 @@ class AppointmentRequestController {
         }
     }
     async checkDateAvailability(date) {
-        return true; // lógica futura
+        return true;
     }
     async checkTimeAvailability(date, time) {
-        return true; // lógica futura
+        return true;
     }
     async cancelAppointment(req, res) {
         try {
@@ -97,12 +113,10 @@ class AppointmentRequestController {
                 res.status(404).json({ error: "Consulta não encontrada." });
                 return;
             }
-            // Verificar se o paciente é o dono da consulta
             if (appointment.patientId !== patientId) {
                 res.status(403).json({ error: "Você não tem permissão para cancelar esta consulta." });
                 return;
             }
-            // Atualizar status da consulta e solicitações relacionadas
             await prisma.$transaction([
                 prisma.appointment.update({
                     where: { id: parseInt(appointmentId) },

@@ -5,8 +5,7 @@ const prisma = new client_1.PrismaClient();
 class PatientController {
     async create(req, res) {
         try {
-            const { name, email, cpf, phone, birthDate, address, city, state, zipCode, country, password, // Ensure password is included
-            number, complement, } = req.body;
+            const { name, email, cpf, phone, birthDate, address, city, state, zipCode, country, password, number, complement, } = req.body;
             const patient = await prisma.patient.create({
                 data: {
                     name,
@@ -29,6 +28,27 @@ class PatientController {
         catch (error) {
             console.error("Erro ao cadastrar paciente:", error);
             res.status(500).json({ error: "Erro ao cadastrar paciente" });
+        }
+    }
+    async getMyProfile(req, res) {
+        try {
+            const patientId = req.patientId;
+            if (!patientId) {
+                res.status(401).json({ error: "Usuário não autenticado" });
+                return;
+            }
+            const patient = await prisma.patient.findUnique({
+                where: { id: patientId },
+            });
+            if (!patient) {
+                res.status(404).json({ error: "Paciente não encontrado" });
+                return;
+            }
+            res.status(200).json(patient);
+        }
+        catch (error) {
+            console.error("Erro ao buscar perfil:", error);
+            res.status(500).json({ error: "Erro ao buscar perfil" });
         }
     }
     async listAll(req, res) {
@@ -93,11 +113,44 @@ class PatientController {
             await prisma.patient.delete({
                 where: { id: parseInt(id) },
             });
-            res.status(204).send(); // 204 No Content para indicar sucesso na deleção
+            res.status(204).send();
         }
         catch (error) {
             console.error("Erro ao deletar paciente:", error);
             res.status(500).json({ error: "Erro ao deletar paciente" });
+        }
+    }
+    async updateMyProfile(req, res) {
+        try {
+            const patientId = req.patientId;
+            if (!patientId) {
+                res.status(401).json({ error: "Usuário não autenticado" });
+                return;
+            }
+            const { name, email, cpf, phone, birthDate, address, city, state, zipCode, country, number, complement } = req.body;
+            const updatedPatient = await prisma.patient.update({
+                where: { id: patientId },
+                data: {
+                    name,
+                    email,
+                    cpf,
+                    phone,
+                    birthDate: birthDate ? new Date(birthDate) : undefined,
+                    address,
+                    city,
+                    state,
+                    zipCode,
+                    country,
+                    number,
+                    complement,
+                    updatedAt: new Date(),
+                },
+            });
+            res.status(200).json(updatedPatient);
+        }
+        catch (error) {
+            console.error("Erro ao atualizar perfil do paciente:", error);
+            res.status(500).json({ error: "Erro ao atualizar perfil" });
         }
     }
 }

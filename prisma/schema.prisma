@@ -34,6 +34,7 @@ model Patient {
   appointments        Appointment[]
   appointmentRequests AppointmentRequest[] @relation(name: "PatientToAppointmentRequest")
   refreshTokens       RefreshToken[]
+  notifications       Notification[]
 }
 
 model User {
@@ -100,10 +101,32 @@ model RefreshToken {
   createdAt DateTime @default(now())
 }
 
+model Notification {
+  id          Int              @id @default(autoincrement())
+  patientId   Int
+  patient     Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String
+  isRead      Boolean          @default(false)
+  scheduledFor DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
 enum AppointmentStatus {
   PENDING
   CONFIRMED
   CANCELLED
   RESCHEDULED
   COMPLETED
+}
+
+enum NotificationType {
+  APPOINTMENT_CONFIRMED
+  APPOINTMENT_REMINDER
+  APPOINTMENT_CANCELLED
+  APPOINTMENT_RESCHEDULED
+  GENERAL
 }

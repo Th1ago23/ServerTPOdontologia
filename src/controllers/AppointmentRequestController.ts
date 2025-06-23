@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AppointmentStatus, PrismaClient } from "@prisma/client";
 import { AuthRequest } from "../middleware/authMiddleware"; // Importe seu middleware de autenticação principal
+import { NotificationService } from "../services/notificationService";
 
 const prisma = new PrismaClient();
 
@@ -52,6 +53,23 @@ class AppointmentRequestController {
           status: AppointmentStatus.PENDING,
         },
       });
+
+      // Criar notificação de solicitação de consulta
+      try {
+        await NotificationService.createNotification({
+          patientId,
+          type: 'GENERAL',
+          title: 'Solicitação de Consulta Enviada! 📋',
+          message: `Sua solicitação de consulta para ${dateObj.toLocaleDateString()} às ${time} foi enviada com sucesso.
+          
+          Procedimento: ${notes || 'Não especificado'}
+          
+          Aguardamos a confirmação da Dra. Tatiane. Você receberá uma notificação assim que for confirmada!`,
+        });
+      } catch (notificationError) {
+        console.error("Erro ao criar notificação:", notificationError);
+        // Não falhar a criação da consulta se a notificação falhar
+      }
   
       console.log("Consulta criada com sucesso:", appointmentRequest);
       res.status(201).json(appointmentRequest);

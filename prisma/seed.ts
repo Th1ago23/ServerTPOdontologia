@@ -29,10 +29,14 @@ async function createAdmin() {
   });
 
   console.log("Usuário admin criado com sucesso:", newAdmin);
+}
+
+async function main() {
+  await createAdmin();
   prisma.$disconnect();
 }
 
-createAdmin().catch((error) => {
-  console.error("Erro ao criar admin:", error);
+main().catch((error) => {
+  console.error("Erro ao executar seed:", error);
   prisma.$disconnect();
 });

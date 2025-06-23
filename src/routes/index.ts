@@ -4,6 +4,7 @@ import authRoutes from './authRoutes';
 import authPatientRoutes from './authPatientRoutes';
 import adminRoutes from './adminRoutes';
 import contactRoutes from './contactRoutes';
+import notificationRoutes from './notificationRoutes';
 import { authenticateToken, authenticatePatient, authenticateAdmin } from '../middleware/authMiddleware';
 import AuthController from '../controllers/AuthController';
 import AppointmentRequestController from '../controllers/AppointmentRequestController';
@@ -17,6 +18,9 @@ router.use('/auth-patient', authPatientRoutes);
 
 // Rotas de pacientes
 router.use('/patients', patientRoutes);
+
+// Rotas de notificações
+router.use('/notifications', notificationRoutes);
 
 // Rotas de administração
 router.use('/admin', adminRoutes);
@@ -34,10 +38,5 @@ router.get('/appointment-requests', authenticateToken, authenticatePatient, Appo
 // Rotas de histórico de consultas
 router.get('/appointments/history/:patientId', authenticateToken, authenticatePatient, AppointmentManagementController.getAppointmentHistory.bind(AppointmentManagementController));
 router.get('/appointments/history', authenticateToken, authenticatePatient, AppointmentManagementController.getMyAppointmentHistory.bind(AppointmentManagementController));
-
-// Rota de teste da API
-router.get('/test-api', (req, res) => {
-  res.status(200).json({ message: 'API está funcionando!' });
-});
 
 export default router;

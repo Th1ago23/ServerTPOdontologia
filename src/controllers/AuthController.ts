@@ -546,22 +546,6 @@ class AuthController {
     }
   }
 
-  async sendTestEmail(req: Request, res: Response): Promise<void> {
-    try {
-      const { sendEmail } = await import('../services/emailService');
-      await sendEmail({
-        to: 'thiago.peixots@gmail.com',
-        subject: 'Teste de envio de e-mail - TP Odontologia',
-        text: 'Este é um e-mail de teste enviado pelo endpoint /test-email.',
-        html: '<h2>Teste de envio de e-mail</h2><p>Este é um e-mail de teste enviado pelo endpoint <b>/test-email</b>.</p>'
-      });
-      res.status(200).json({ message: 'E-mail de teste enviado com sucesso!' });
-    } catch (error) {
-      console.error('Erro ao enviar e-mail de teste:', error);
-      res.status(500).json({ error: 'Erro ao enviar e-mail de teste', details: error instanceof Error ? error.message : error });
-    }
-  }
-
   async requestPasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email } = req.body;
@@ -730,6 +714,40 @@ class AuthController {
     } catch (error) {
       console.error("Erro ao atualizar tokens:", error);
       res.status(401).json({ error: "Erro ao atualizar tokens" });
+    }
+  }
+
+  async getUserType(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.query;
+      console.log('Verificando tipo de usuário:', { email });
+
+      if (!email || typeof email !== 'string') {
+        res.status(400).json({ error: 'Email é obrigatório' });
+        return;
+      }
+
+      // Verificar se é admin
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        console.log('Usuário encontrado como admin');
+        res.status(200).json({ userType: 'admin' });
+        return;
+      }
+
+      // Verificar se é paciente
+      const patient = await prisma.patient.findUnique({ where: { email } });
+      if (patient) {
+        console.log('Usuário encontrado como paciente');
+        res.status(200).json({ userType: 'patient' });
+        return;
+      }
+
+      console.log('Usuário não encontrado');
+      res.status(404).json({ error: 'Usuário não encontrado' });
+    } catch (error) {
+      console.error('Erro ao verificar tipo de usuário:', error);
+      res.status(500).json({ error: 'Erro interno do servidor' });
     }
   }
 }

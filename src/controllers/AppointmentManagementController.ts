@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient, AppointmentStatus } from "@prisma/client";
 import { AuthRequest } from "../middleware/authMiddleware";
+import { NotificationService } from "../services/notificationService";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,7 @@ class AppointmentManagementController {
 
       const appointmentRequest = await prisma.appointmentRequest.findUnique({
         where: { id: parseInt(requestId) },
+        include: { patient: true },
       });
 
       if (!appointmentRequest) {
@@ -64,6 +66,31 @@ class AppointmentManagementController {
         data: { status: AppointmentStatus.CONFIRMED, appointmentId: newAppointment.id },
       });
 
+      // Criar notificação de confirmação
+      try {
+        await NotificationService.createAppointmentConfirmation(
+          appointmentRequest.patientId,
+          {
+            date: appointmentRequest.date,
+            time: appointmentRequest.time,
+            notes: appointmentRequest.notes,
+          }
+        );
+
+        // Criar lembrete 24h antes
+        await NotificationService.createAppointmentReminder(
+          appointmentRequest.patientId,
+          {
+            date: appointmentRequest.date,
+            time: appointmentRequest.time,
+            notes: appointmentRequest.notes,
+          }
+        );
+      } catch (notificationError) {
+        console.error("Erro ao criar notificações:", notificationError);
+        // Não falhar a aprovação se as notificações falharem
+      }
+
       res.status(201).json(newAppointment);
     } catch (error) {
       console.error("Erro ao aprovar consulta:", error);
@@ -77,6 +104,7 @@ class AppointmentManagementController {
 
       const appointmentRequest = await prisma.appointmentRequest.findUnique({
         where: { id: parseInt(requestId) },
+        include: { patient: true },
       });
 
       if (!appointmentRequest) {
@@ -88,6 +116,22 @@ class AppointmentManagementController {
         where: { id: parseInt(requestId) },
         data: { status: AppointmentStatus.CANCELLED },
       });
+
+      // Criar notificação de rejeição
+      try {
+        await NotificationService.createNotification({
+          patientId: appointmentRequest.patientId,
+          type: 'APPOINTMENT_CANCELLED',
+          title: 'Consulta Não Confirmada ❌',
+          message: `Infelizmente sua solicitação de consulta para ${appointmentRequest.date.toLocaleDateString()} às ${appointmentRequest.time} não pôde ser confirmada.
+          
+          Procedimento: ${appointmentRequest.notes || 'Não especificado'}
+          
+          Entre em contato conosco para reagendar em outro horário disponível.`,
+        });
+      } catch (notificationError) {
+        console.error("Erro ao criar notificação de rejeição:", notificationError);
+      }
 
       res.status(200).json({ message: "Solicitação de consulta rejeitada com sucesso." });
     } catch (error) {
@@ -103,6 +147,7 @@ class AppointmentManagementController {
 
       const appointmentRequest = await prisma.appointmentRequest.findUnique({
         where: { id: parseInt(requestId) },
+        include: { patient: true },
       });
 
       if (!appointmentRequest) {
@@ -130,10 +175,32 @@ class AppointmentManagementController {
         return;
       }
 
+      const oldDate = appointmentRequest.date;
+      const oldTime = appointmentRequest.time;
+
       await prisma.appointmentRequest.update({
         where: { id: parseInt(requestId) },
         data: { date: new Date(newDate), time: newTime, status: AppointmentStatus.RESCHEDULED },
       });
+
+      // Criar notificação de reagendamento
+      try {
+        await NotificationService.createNotification({
+          patientId: appointmentRequest.patientId,
+          type: 'APPOINTMENT_RESCHEDULED',
+          title: 'Consulta Reagendada! 📅',
+          message: `Sua consulta foi reagendada com sucesso!
+          
+          Data anterior: ${oldDate.toLocaleDateString()} às ${oldTime}
+          Nova data: ${new Date(newDate).toLocaleDateString()} às ${newTime}
+          
+          Procedimento: ${appointmentRequest.notes || 'Não especificado'}
+          
+          Aguardamos você no novo horário!`,
+        });
+      } catch (notificationError) {
+        console.error("Erro ao criar notificação de reagendamento:", notificationError);
+      }
 
       res.status(200).json({ message: "Solicitação de consulta reagendada com sucesso." });
     } catch (error) {
@@ -320,7 +387,10 @@ class AppointmentManagementController {
 
       const appointment = await prisma.appointment.findUnique({
         where: { id: parseInt(appointmentId) },
-        include: { appointmentRequests: true }
+        include: { 
+          appointmentRequests: true,
+          patient: true
+        }
       });
 
       if (!appointment) {
@@ -347,6 +417,23 @@ class AppointmentManagementController {
           })
         )
       ]);
+
+      // Criar notificação de cancelamento
+      try {
+        await NotificationService.createNotification({
+          patientId: appointment.patientId,
+          type: 'APPOINTMENT_CANCELLED',
+          title: 'Consulta Cancelada ❌',
+          message: `Sua consulta para ${appointment.date.toLocaleDateString()} às ${appointment.time} foi cancelada.
+          
+          Procedimento: ${appointment.notes || 'Não especificado'}
+          Motivo: ${reason || 'Não especificado'}
+          
+          Entre em contato conosco para reagendar em outro horário disponível.`,
+        });
+      } catch (notificationError) {
+        console.error("Erro ao criar notificação de cancelamento:", notificationError);
+      }
 
       res.status(200).json({ message: "Consulta cancelada com sucesso." });
     } catch (error) {

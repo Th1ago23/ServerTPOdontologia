@@ -16,7 +16,8 @@
     "deploy": "prisma migrate deploy && npm run seed",
     "heroku-postbuild": "prisma generate && npm run build",
     "heroku-postdeploy": "prisma migrate deploy && npm run seed",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "notifications:process": "ts-node src/scripts/processNotifications.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

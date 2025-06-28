@@ -42,7 +42,32 @@ class AppointmentManagementController {
       });
       
       console.log('Debug - requests encontradas:', requests.length);
-      res.status(200).json(requests);
+      
+      // Log detalhado das datas para debug
+      requests.forEach((request, index) => {
+        console.log(`Request ${index + 1}:`, {
+          id: request.id,
+          requestedDate: request.requestedDate,
+          requestedDateType: typeof request.requestedDate,
+          requestedDateISO: request.requestedDate.toISOString(),
+          requestedTime: request.requestedTime,
+          status: request.status
+        });
+      });
+
+      // Serializar as datas de forma explícita para evitar problemas
+      const requestsSerializadas = requests.map(request => ({
+        ...request,
+        requestedDate: request.requestedDate.toISOString(),
+        createdAt: request.createdAt.toISOString(),
+        updatedAt: request.updatedAt.toISOString(),
+        confirmedAt: request.confirmedAt?.toISOString() || null,
+        cancelledAt: request.cancelledAt?.toISOString() || null,
+        rescheduledAt: request.rescheduledAt?.toISOString() || null,
+        completedAt: request.completedAt?.toISOString() || null,
+      }));
+
+      res.status(200).json(requestsSerializadas);
     } catch (error) {
       console.error("Erro ao listar solicitações de consulta:", error);
       res.status(500).json({ error: "Erro ao listar solicitações de consulta." });

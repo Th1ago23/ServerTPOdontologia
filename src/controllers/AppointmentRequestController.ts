@@ -102,9 +102,33 @@ class AppointmentRequestController {
         orderBy: { requestedDate: 'asc' },
       });
 
-      console.log("Consultas encontradas (backend):", JSON.stringify(consultas, null, 2));
-      console.log("Número de consultas encontradas (backend):", consultas.length);
-      res.status(200).json(consultas);
+      // Log detalhado das datas para debug
+      console.log("Consultas encontradas (backend):", consultas.length);
+      consultas.forEach((consulta, index) => {
+        console.log(`Consulta ${index + 1}:`, {
+          id: consulta.id,
+          requestedDate: consulta.requestedDate,
+          requestedDateType: typeof consulta.requestedDate,
+          requestedDateISO: consulta.requestedDate.toISOString(),
+          requestedTime: consulta.requestedTime,
+          status: consulta.status
+        });
+      });
+
+      // Serializar as datas de forma explícita para evitar problemas
+      const consultasSerializadas = consultas.map(consulta => ({
+        ...consulta,
+        requestedDate: consulta.requestedDate.toISOString(),
+        createdAt: consulta.createdAt.toISOString(),
+        updatedAt: consulta.updatedAt.toISOString(),
+        confirmedAt: consulta.confirmedAt?.toISOString() || null,
+        cancelledAt: consulta.cancelledAt?.toISOString() || null,
+        rescheduledAt: consulta.rescheduledAt?.toISOString() || null,
+        completedAt: consulta.completedAt?.toISOString() || null,
+      }));
+
+      console.log("Consultas serializadas:", JSON.stringify(consultasSerializadas, null, 2));
+      res.status(200).json(consultasSerializadas);
     } catch (error) {
       console.error("Erro ao listar consultas do paciente:", error);
       res.status(500).json({ error: "Erro ao listar consultas do paciente." });

@@ -55,7 +55,7 @@ class AppointmentManagementController {
         });
       });
 
-      // Serializar as datas de forma explícita para evitar problemas
+
       const requestsSerializadas = requests.map(request => ({
         ...request,
         requestedDate: request.requestedDate.toISOString(),

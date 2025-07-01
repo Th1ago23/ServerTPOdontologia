@@ -4,6 +4,7 @@ import authRoutes from './authRoutes';
 import authPatientRoutes from './authPatientRoutes';
 import adminRoutes from './adminRoutes';
 import contactRoutes from './contactRoutes';
+import notificationRoutes from './notificationRoutes';
 import { authenticateToken, authenticatePatient, authenticateAdmin } from '../middleware/authMiddleware';
 import AuthController from '../controllers/AuthController';
 import AppointmentRequestController from '../controllers/AppointmentRequestController';
@@ -23,6 +24,9 @@ router.use('/admin', adminRoutes);
 
 // Rotas de contato
 router.use('/contact', contactRoutes);
+
+// Rotas de notificações
+router.use('/notifications', notificationRoutes);
 
 // Info do usuário autenticado
 router.get('/me', authenticateToken, AuthController.me.bind(AuthController));

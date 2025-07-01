@@ -80,7 +80,13 @@ const allowedOrigins = [
   'exp://192.168.1.9:19000',
   'exp://192.168.1.10:19000',
   'http://localhost:19006',
-  'http://localhost:19000'
+  'http://localhost:19000',
+  // Origins para Electron
+  'file://',
+  'chrome-extension://',
+  'app://',
+  'http://localhost:3000',
+  'https://localhost:3000'
 ];
 
 // Configuração do CORS
@@ -93,9 +99,15 @@ const corsOptions: CorsOptions = {
     console.log('NODE_ENV:', process.env.NODE_ENV);
     console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
     
-    // Permite requisições sem origin (ex: ferramentas internas, mobile, etc)
+    // Permite requisições sem origin (ex: ferramentas internas, mobile, Electron, etc)
     if (!origin) {
-      console.log('Requisição sem origin - permitindo');
+      console.log('Requisição sem origin - permitindo (Electron/Mobile)');
+      return callback(null, true);
+    }
+    
+    // Permite requisições do Electron (file://, chrome-extension://, app://)
+    if (origin.startsWith('file://') || origin.startsWith('chrome-extension://') || origin.startsWith('app://')) {
+      console.log('Origin do Electron permitida:', origin);
       return callback(null, true);
     }
     

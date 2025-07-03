@@ -36,7 +36,21 @@ class AppointmentManagementController {
                 orderBy: { requestedDate: 'asc' },
             });
             console.log('Debug - requests encontradas:', requests.length);
-            res.status(200).json(requests);
+            requests.forEach((request, index) => {
+                console.log(`Request ${index + 1}:`, {
+                    id: request.id,
+                    requestedDate: request.requestedDate,
+                    requestedDateType: typeof request.requestedDate,
+                    requestedDateISO: request.requestedDate.toISOString(),
+                    requestedTime: request.requestedTime,
+                    status: request.status
+                });
+            });
+            const requestsSerializadas = requests.map(request => {
+                var _a, _b, _c, _d;
+                return (Object.assign(Object.assign({}, request), { requestedDate: request.requestedDate.toISOString(), createdAt: request.createdAt.toISOString(), updatedAt: request.updatedAt.toISOString(), confirmedAt: ((_a = request.confirmedAt) === null || _a === void 0 ? void 0 : _a.toISOString()) || null, cancelledAt: ((_b = request.cancelledAt) === null || _b === void 0 ? void 0 : _b.toISOString()) || null, rescheduledAt: ((_c = request.rescheduledAt) === null || _c === void 0 ? void 0 : _c.toISOString()) || null, completedAt: ((_d = request.completedAt) === null || _d === void 0 ? void 0 : _d.toISOString()) || null }));
+            });
+            res.status(200).json(requestsSerializadas);
         }
         catch (error) {
             console.error("Erro ao listar solicitações de consulta:", error);
@@ -225,7 +239,7 @@ class AppointmentManagementController {
             const allAppointments = [
                 ...appointments.map(apt => ({
                     id: apt.id,
-                    date: apt.date,
+                    date: apt.date.toISOString(),
                     time: apt.time,
                     status: apt.status,
                     type: 'confirmed',
@@ -233,17 +247,19 @@ class AppointmentManagementController {
                 })),
                 ...pendingRequests.map((req) => ({
                     id: req.id,
-                    date: req.requestedDate,
-                    time: req.requestedTime,
+                    requestedDate: req.requestedDate.toISOString(),
+                    requestedTime: req.requestedTime,
                     status: req.status,
                     type: 'pending',
                     patient: req.patient
                 }))
             ].sort((a, b) => {
-                const dateA = new Date(a.date);
-                const dateB = new Date(b.date);
+                const dateA = new Date(a.type === 'confirmed' ? a.date : a.requestedDate);
+                const dateB = new Date(b.type === 'confirmed' ? b.date : b.requestedDate);
                 if (dateA.getTime() === dateB.getTime()) {
-                    return a.time.localeCompare(b.time);
+                    const timeA = a.type === 'confirmed' ? a.time : a.requestedTime;
+                    const timeB = b.type === 'confirmed' ? b.time : b.requestedTime;
+                    return timeA.localeCompare(timeB);
                 }
                 return dateA.getTime() - dateB.getTime();
             });
@@ -525,6 +541,21 @@ class AppointmentManagementController {
                         appointmentId: newAppointment.id
                     }
                 });
+                try {
+                    await notificationService_1.NotificationService.createAppointmentConfirmation(appointmentRequest.patientId, {
+                        date: appointmentRequest.requestedDate,
+                        time: appointmentRequest.requestedTime,
+                        notes: appointmentRequest.notes,
+                    });
+                    await notificationService_1.NotificationService.createAppointmentReminder(appointmentRequest.patientId, {
+                        date: appointmentRequest.requestedDate,
+                        time: appointmentRequest.requestedTime,
+                        notes: appointmentRequest.notes,
+                    });
+                }
+                catch (notificationError) {
+                    console.error("Erro ao criar notificações:", notificationError);
+                }
                 console.log('Novo agendamento criado:', newAppointment);
                 res.status(200).json({ message: "Agendamento confirmado com sucesso." });
                 return;

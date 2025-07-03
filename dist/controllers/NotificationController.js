@@ -84,6 +84,22 @@ class NotificationController {
             res.status(500).json({ error: "Erro ao criar notificação" });
         }
     }
+    async deleteNotification(req, res) {
+        try {
+            const patientId = req.patientId;
+            const { notificationId } = req.params;
+            if (!patientId) {
+                res.status(401).json({ error: "Usuário não autenticado" });
+                return;
+            }
+            await notificationService_1.NotificationService.deleteNotification(parseInt(notificationId), patientId);
+            res.status(200).json({ message: "Notificação deletada com sucesso" });
+        }
+        catch (error) {
+            console.error("Erro ao deletar notificação:", error);
+            res.status(500).json({ error: "Erro ao deletar notificação" });
+        }
+    }
     async processScheduledNotifications(req, res) {
         try {
             await notificationService_1.NotificationService.processScheduledNotifications();

@@ -85,9 +85,23 @@ class AppointmentRequestController {
                 },
                 orderBy: { requestedDate: 'asc' },
             });
-            console.log("Consultas encontradas (backend):", JSON.stringify(consultas, null, 2));
-            console.log("Número de consultas encontradas (backend):", consultas.length);
-            res.status(200).json(consultas);
+            console.log("Consultas encontradas (backend):", consultas.length);
+            consultas.forEach((consulta, index) => {
+                console.log(`Consulta ${index + 1}:`, {
+                    id: consulta.id,
+                    requestedDate: consulta.requestedDate,
+                    requestedDateType: typeof consulta.requestedDate,
+                    requestedDateISO: consulta.requestedDate.toISOString(),
+                    requestedTime: consulta.requestedTime,
+                    status: consulta.status
+                });
+            });
+            const consultasSerializadas = consultas.map(consulta => {
+                var _a, _b, _c, _d;
+                return (Object.assign(Object.assign({}, consulta), { requestedDate: consulta.requestedDate.toISOString(), createdAt: consulta.createdAt.toISOString(), updatedAt: consulta.updatedAt.toISOString(), confirmedAt: ((_a = consulta.confirmedAt) === null || _a === void 0 ? void 0 : _a.toISOString()) || null, cancelledAt: ((_b = consulta.cancelledAt) === null || _b === void 0 ? void 0 : _b.toISOString()) || null, rescheduledAt: ((_c = consulta.rescheduledAt) === null || _c === void 0 ? void 0 : _c.toISOString()) || null, completedAt: ((_d = consulta.completedAt) === null || _d === void 0 ? void 0 : _d.toISOString()) || null }));
+            });
+            console.log("Consultas serializadas:", JSON.stringify(consultasSerializadas, null, 2));
+            res.status(200).json(consultasSerializadas);
         }
         catch (error) {
             console.error("Erro ao listar consultas do paciente:", error);

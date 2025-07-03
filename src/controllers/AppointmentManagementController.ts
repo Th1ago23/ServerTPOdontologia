@@ -5,6 +5,36 @@ import { NotificationService } from "../services/notificationService";
 
 const prisma = new PrismaClient();
 
+interface ConfirmedAppointment {
+  id: number;
+  date: string;
+  time: string;
+  status: AppointmentStatus;
+  type: 'confirmed';
+  patient: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+  };
+}
+
+interface PendingAppointment {
+  id: number;
+  requestedDate: string;
+  requestedTime: string;
+  status: AppointmentStatus;
+  type: 'pending';
+  patient: {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+  };
+}
+
+type CombinedAppointment = ConfirmedAppointment | PendingAppointment;
+
 class AppointmentManagementController {
   async listPending(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -304,13 +334,13 @@ class AppointmentManagementController {
       });
 
       // Combinar os resultados
-      const allAppointments = [
+      const allAppointments: CombinedAppointment[] = [
         ...appointments.map(apt => ({
           id: apt.id,
           date: apt.date.toISOString(),
           time: apt.time,
           status: apt.status,
-          type: 'confirmed',
+          type: 'confirmed' as const,
           patient: apt.patient
         })),
         ...pendingRequests.map((req: any) => ({
@@ -318,14 +348,16 @@ class AppointmentManagementController {
           requestedDate: req.requestedDate.toISOString(),
           requestedTime: req.requestedTime,
           status: req.status,
-          type: 'pending',
+          type: 'pending' as const,
           patient: req.patient
         }))
       ].sort((a, b) => {
-        const dateA = new Date(a.date || a.requestedDate);
-        const dateB = new Date(b.date || b.requestedDate);
+        const dateA = new Date(a.type === 'confirmed' ? a.date : a.requestedDate);
+        const dateB = new Date(b.type === 'confirmed' ? b.date : b.requestedDate);
         if (dateA.getTime() === dateB.getTime()) {
-          return (a.time || a.requestedTime).localeCompare(b.time || b.requestedTime);
+          const timeA = a.type === 'confirmed' ? a.time : a.requestedTime;
+          const timeB = b.type === 'confirmed' ? b.time : b.requestedTime;
+          return timeA.localeCompare(timeB);
         }
         return dateA.getTime() - dateB.getTime();
       });

@@ -110,7 +110,41 @@ class NotificationService {
             throw error;
         }
     }
+    static async deleteNotification(notificationId, patientId) {
+        try {
+            const notification = await prisma.notification.findFirst({
+                where: {
+                    id: notificationId,
+                    patientId: patientId
+                },
+            });
+            if (!notification) {
+                throw new Error('Notificação não encontrada ou não pertence ao paciente');
+            }
+            await prisma.notification.delete({
+                where: { id: notificationId },
+            });
+        }
+        catch (error) {
+            console.error('Erro ao deletar notificação:', error);
+            throw error;
+        }
+    }
     static async createAppointmentConfirmation(patientId, appointmentData) {
+        const existingNotification = await prisma.notification.findFirst({
+            where: {
+                patientId,
+                type: client_1.NotificationType.APPOINTMENT_CONFIRMED,
+                title: 'Consulta Confirmada! 🦷',
+                message: {
+                    contains: `${new Date(appointmentData.date).toLocaleDateString()} às ${appointmentData.time}`
+                }
+            }
+        });
+        if (existingNotification) {
+            console.log('Notificação de confirmação já existe, pulando criação...');
+            return existingNotification;
+        }
         const title = 'Consulta Confirmada! 🦷';
         const message = `Sua consulta foi confirmada para ${new Date(appointmentData.date).toLocaleDateString()} às ${appointmentData.time}. 
     
@@ -127,6 +161,20 @@ class NotificationService {
     static async createAppointmentReminder(patientId, appointmentData) {
         const appointmentDate = new Date(appointmentData.date);
         const reminderDate = new Date(appointmentDate.getTime() - 24 * 60 * 60 * 1000);
+        const existingReminder = await prisma.notification.findFirst({
+            where: {
+                patientId,
+                type: client_1.NotificationType.APPOINTMENT_REMINDER,
+                title: 'Lembrete: Sua consulta é amanhã! ⏰',
+                message: {
+                    contains: `${appointmentDate.toLocaleDateString()} às ${appointmentData.time}`
+                }
+            }
+        });
+        if (existingReminder) {
+            console.log('Lembrete já existe, pulando criação...');
+            return existingReminder;
+        }
         const title = 'Lembrete: Sua consulta é amanhã! ⏰';
         const message = `Olá! Lembramos que você tem uma consulta amanhã (${appointmentDate.toLocaleDateString()}) às ${appointmentData.time}.
     

@@ -152,13 +152,32 @@ class AppointmentManagementController {
     async reschedule(req, res) {
         try {
             const { requestId } = req.params;
-            const { newDate, newTime } = req.body;
+            const { newDate, newTime, notes } = req.body;
+            console.log('Tentando reagendar consulta:', { requestId, newDate, newTime });
+            if (!requestId || isNaN(parseInt(requestId))) {
+                res.status(400).json({ error: "ID de solicitação inválido." });
+                return;
+            }
+            if (!newDate || !newTime) {
+                res.status(400).json({ error: "Nova data e horário são obrigatórios." });
+                return;
+            }
+            const selectedDateTime = new Date(`${newDate}T${newTime}`);
+            const now = new Date();
+            if (selectedDateTime <= now) {
+                res.status(400).json({ error: "A nova data e horário devem ser no futuro." });
+                return;
+            }
             const appointmentRequest = await prisma.appointmentRequest.findUnique({
                 where: { id: parseInt(requestId) },
-                include: { patient: true },
+                include: { patient: true }
             });
             if (!appointmentRequest) {
                 res.status(404).json({ error: "Solicitação não encontrada." });
+                return;
+            }
+            if (appointmentRequest.status === client_1.AppointmentStatus.CANCELLED) {
+                res.status(400).json({ error: "Não é possível reagendar uma solicitação cancelada." });
                 return;
             }
             const isNewTimeSlotFree = await this.checkTimeSlotAvailability(appointmentRequest.patientId, new Date(newDate), newTime);
@@ -168,14 +187,19 @@ class AppointmentManagementController {
             }
             const isWithinWorkingHours = this.checkWorkingHours(new Date(newDate), newTime);
             if (!isWithinWorkingHours) {
-                res.status(400).json({ error: "O novo horário selecionado está fora do horário de funcionamento." });
+                res.status(400).json({ error: "O novo horário selecionado está fora do horário de funcionamento (8:00 às 18:00)." });
                 return;
             }
             const oldDate = appointmentRequest.requestedDate;
             const oldTime = appointmentRequest.requestedTime;
-            await prisma.appointmentRequest.update({
+            const updatedRequest = await prisma.appointmentRequest.update({
                 where: { id: parseInt(requestId) },
-                data: { requestedDate: new Date(newDate), requestedTime: newTime, status: client_1.AppointmentStatus.RESCHEDULED },
+                data: {
+                    requestedDate: new Date(newDate),
+                    requestedTime: newTime,
+                    status: client_1.AppointmentStatus.RESCHEDULED,
+                    notes: notes || appointmentRequest.notes
+                }
             });
             try {
                 await notificationService_1.NotificationService.createNotification({
@@ -187,7 +211,7 @@ class AppointmentManagementController {
           Data anterior: ${oldDate.toLocaleDateString()} às ${oldTime}
           Nova data: ${new Date(newDate).toLocaleDateString()} às ${newTime}
           
-          Procedimento: ${appointmentRequest.notes || 'Não especificado'}
+          Procedimento: ${notes || appointmentRequest.notes || 'Não especificado'}
           
           Aguardamos você no novo horário!`,
                 });
@@ -195,11 +219,15 @@ class AppointmentManagementController {
             catch (notificationError) {
                 console.error("Erro ao criar notificação de reagendamento:", notificationError);
             }
-            res.status(200).json({ message: "Solicitação de consulta reagendada com sucesso." });
+            console.log('Solicitação reagendada com sucesso:', updatedRequest);
+            res.status(200).json({
+                message: "Solicitação de consulta reagendada com sucesso.",
+                request: updatedRequest
+            });
         }
         catch (error) {
             console.error("Erro ao reagendar consulta:", error);
-            res.status(500).json({ error: "Erro ao reagendar consulta." });
+            res.status(500).json({ error: "Erro interno do servidor ao reagendar consulta." });
         }
     }
     async listAllAppointments(req, res) {
@@ -520,11 +548,30 @@ class AppointmentManagementController {
         try {
             const { appointmentId } = req.params;
             console.log('Tentando confirmar agendamento:', { appointmentId });
+            if (!appointmentId || isNaN(parseInt(appointmentId))) {
+                res.status(400).json({ error: "ID de agendamento inválido." });
+                return;
+            }
             const appointmentRequest = await prisma.appointmentRequest.findUnique({
                 where: { id: parseInt(appointmentId) },
+                include: { patient: true }
             });
             console.log('Solicitação encontrada:', appointmentRequest);
             if (appointmentRequest) {
+                if (appointmentRequest.status === client_1.AppointmentStatus.CONFIRMED) {
+                    res.status(400).json({ error: "Esta solicitação já foi confirmada." });
+                    return;
+                }
+                const isTimeSlotFree = await this.checkTimeSlotAvailability(appointmentRequest.patientId, appointmentRequest.requestedDate, appointmentRequest.requestedTime);
+                if (!isTimeSlotFree) {
+                    res.status(409).json({ error: "O horário solicitado já está ocupado." });
+                    return;
+                }
+                const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.requestedDate, appointmentRequest.requestedTime);
+                if (!isWithinWorkingHours) {
+                    res.status(400).json({ error: "O horário solicitado está fora do horário de funcionamento." });
+                    return;
+                }
                 const newAppointment = await prisma.appointment.create({
                     data: {
                         patientId: appointmentRequest.patientId,
@@ -557,15 +604,23 @@ class AppointmentManagementController {
                     console.error("Erro ao criar notificações:", notificationError);
                 }
                 console.log('Novo agendamento criado:', newAppointment);
-                res.status(200).json({ message: "Agendamento confirmado com sucesso." });
+                res.status(200).json({
+                    message: "Agendamento confirmado com sucesso.",
+                    appointment: newAppointment
+                });
                 return;
             }
             const appointment = await prisma.appointment.findUnique({
                 where: { id: parseInt(appointmentId) },
+                include: { patient: true }
             });
             console.log('Agendamento existente encontrado:', appointment);
             if (!appointment) {
                 res.status(404).json({ error: "Agendamento não encontrado." });
+                return;
+            }
+            if (appointment.status === client_1.AppointmentStatus.CONFIRMED) {
+                res.status(400).json({ error: "Este agendamento já está confirmado." });
                 return;
             }
             const updatedAppointment = await prisma.appointment.update({
@@ -573,11 +628,14 @@ class AppointmentManagementController {
                 data: { status: client_1.AppointmentStatus.CONFIRMED },
             });
             console.log('Agendamento atualizado:', updatedAppointment);
-            res.status(200).json({ message: "Agendamento confirmado com sucesso." });
+            res.status(200).json({
+                message: "Agendamento confirmado com sucesso.",
+                appointment: updatedAppointment
+            });
         }
         catch (error) {
             console.error("Erro ao confirmar agendamento:", error);
-            res.status(500).json({ error: "Erro ao confirmar agendamento." });
+            res.status(500).json({ error: "Erro interno do servidor ao confirmar agendamento." });
         }
     }
     generateTimeSlots() {

@@ -17,9 +17,9 @@ router.get("/appointments/available-slots/:date", AppointmentManagementControlle
 // Rotas de gerenciamento de solicitações
 router.get("/appointment-requests", AppointmentManagementController.listAllAppointmentRequests.bind(AppointmentManagementController));
 router.get("/requests/pending", AppointmentManagementController.listPending);
-router.post("/requests/:requestId/approve", AppointmentManagementController.approve);
-router.post("/requests/:requestId/reject", AppointmentManagementController.reject);
-router.post("/requests/:requestId/reschedule", AppointmentManagementController.reschedule);
+router.post("/requests/:requestId/approve", AppointmentManagementController.approve.bind(AppointmentManagementController));
+router.post("/requests/:requestId/reject", AppointmentManagementController.reject.bind(AppointmentManagementController));
+router.post("/requests/:requestId/reschedule", AppointmentManagementController.reschedule.bind(AppointmentManagementController));
 
 // Rotas de gerenciamento de consultas existentes
 router.post("/appointments/:appointmentId/cancel", AppointmentManagementController.cancelAppointment);

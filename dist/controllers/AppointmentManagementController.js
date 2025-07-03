@@ -59,38 +59,70 @@ class AppointmentManagementController {
     }
     async approve(req, res) {
         try {
+            console.log('🔍 Approve - Iniciando método');
+            console.log('🔍 Approve - req.params:', req.params);
+            console.log('🔍 Approve - req.body:', req.body);
+            console.log('🔍 Approve - req.userId:', req.userId);
+            console.log('🔍 Approve - req.isAdmin:', req.isAdmin);
             const { requestId } = req.params;
+            if (!requestId || isNaN(parseInt(requestId))) {
+                console.log('❌ ID de solicitação inválido:', requestId);
+                res.status(400).json({ error: "ID de solicitação inválido." });
+                return;
+            }
+            console.log('🔍 Buscando solicitação com ID:', parseInt(requestId));
             const appointmentRequest = await prisma.appointmentRequest.findUnique({
                 where: { id: parseInt(requestId) },
-                include: { patient: true },
+                include: { patient: true }
             });
+            console.log('🔍 Solicitação encontrada:', appointmentRequest);
             if (!appointmentRequest) {
+                console.log('❌ Solicitação não encontrada');
                 res.status(404).json({ error: "Solicitação não encontrada." });
                 return;
             }
+            if (appointmentRequest.status === client_1.AppointmentStatus.CONFIRMED) {
+                console.log('❌ Solicitação já confirmada');
+                res.status(400).json({ error: "Esta solicitação já foi confirmada." });
+                return;
+            }
+            console.log('🔍 Verificando disponibilidade do horário...');
             const isTimeSlotFree = await this.checkTimeSlotAvailability(appointmentRequest.patientId, appointmentRequest.requestedDate, appointmentRequest.requestedTime);
+            console.log('🔍 Horário disponível:', isTimeSlotFree);
             if (!isTimeSlotFree) {
+                console.log('❌ Horário já ocupado');
                 res.status(409).json({ error: "O horário solicitado já está ocupado." });
                 return;
             }
+            console.log('🔍 Verificando horário de funcionamento...');
             const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.requestedDate, appointmentRequest.requestedTime);
+            console.log('🔍 Dentro do horário de funcionamento:', isWithinWorkingHours);
             if (!isWithinWorkingHours) {
+                console.log('❌ Fora do horário de funcionamento');
                 res.status(400).json({ error: "O horário solicitado está fora do horário de funcionamento." });
                 return;
             }
+            console.log('✅ Todas as validações passaram, criando agendamento...');
             const newAppointment = await prisma.appointment.create({
                 data: {
                     patientId: appointmentRequest.patientId,
                     date: appointmentRequest.requestedDate,
                     time: appointmentRequest.requestedTime,
                     notes: appointmentRequest.notes,
+                    status: client_1.AppointmentStatus.CONFIRMED
                 },
             });
+            console.log('✅ Novo agendamento criado:', newAppointment);
             await prisma.appointmentRequest.update({
                 where: { id: parseInt(requestId) },
-                data: { status: client_1.AppointmentStatus.CONFIRMED, appointmentId: newAppointment.id },
+                data: {
+                    status: client_1.AppointmentStatus.CONFIRMED,
+                    appointmentId: newAppointment.id
+                },
             });
+            console.log('✅ Status da solicitação atualizado');
             try {
+                console.log('🔍 Criando notificações...');
                 await notificationService_1.NotificationService.createAppointmentConfirmation(appointmentRequest.patientId, {
                     date: appointmentRequest.requestedDate,
                     time: appointmentRequest.requestedTime,
@@ -101,33 +133,63 @@ class AppointmentManagementController {
                     time: appointmentRequest.requestedTime,
                     notes: appointmentRequest.notes,
                 });
+                console.log('✅ Notificações criadas com sucesso');
             }
             catch (notificationError) {
                 console.error("Erro ao criar notificações:", notificationError);
             }
-            res.status(201).json(newAppointment);
+            console.log('✅ Aprovação concluída com sucesso');
+            res.status(201).json({
+                message: "Solicitação aprovada com sucesso.",
+                appointment: newAppointment
+            });
         }
         catch (error) {
-            console.error("Erro ao aprovar consulta:", error);
-            res.status(500).json({ error: "Erro ao aprovar consulta." });
+            console.error("❌ Erro detalhado ao aprovar consulta:", {
+                error,
+                message: error.message,
+                stack: error.stack
+            });
+            res.status(500).json({ error: "Erro interno do servidor ao aprovar consulta." });
         }
     }
     async reject(req, res) {
         try {
+            console.log('🔍 Reject - Iniciando método');
+            console.log('🔍 Reject - req.params:', req.params);
+            console.log('🔍 Reject - req.body:', req.body);
+            console.log('🔍 Reject - req.userId:', req.userId);
+            console.log('🔍 Reject - req.isAdmin:', req.isAdmin);
             const { requestId } = req.params;
+            if (!requestId || isNaN(parseInt(requestId))) {
+                console.log('❌ ID de solicitação inválido:', requestId);
+                res.status(400).json({ error: "ID de solicitação inválido." });
+                return;
+            }
+            console.log('🔍 Buscando solicitação com ID:', parseInt(requestId));
             const appointmentRequest = await prisma.appointmentRequest.findUnique({
                 where: { id: parseInt(requestId) },
-                include: { patient: true },
+                include: { patient: true }
             });
+            console.log('🔍 Solicitação encontrada:', appointmentRequest);
             if (!appointmentRequest) {
+                console.log('❌ Solicitação não encontrada');
                 res.status(404).json({ error: "Solicitação não encontrada." });
                 return;
             }
+            if (appointmentRequest.status === client_1.AppointmentStatus.CANCELLED) {
+                console.log('❌ Solicitação já cancelada');
+                res.status(400).json({ error: "Esta solicitação já foi cancelada." });
+                return;
+            }
+            console.log('✅ Atualizando status para CANCELLED...');
             await prisma.appointmentRequest.update({
                 where: { id: parseInt(requestId) },
                 data: { status: client_1.AppointmentStatus.CANCELLED },
             });
+            console.log('✅ Status da solicitação atualizado');
             try {
+                console.log('🔍 Criando notificação de rejeição...');
                 await notificationService_1.NotificationService.createNotification({
                     patientId: appointmentRequest.patientId,
                     type: 'APPOINTMENT_CANCELLED',
@@ -138,15 +200,21 @@ class AppointmentManagementController {
           
           Entre em contato conosco para reagendar em outro horário disponível.`,
                 });
+                console.log('✅ Notificação de rejeição criada com sucesso');
             }
             catch (notificationError) {
                 console.error("Erro ao criar notificação de rejeição:", notificationError);
             }
+            console.log('✅ Rejeição concluída com sucesso');
             res.status(200).json({ message: "Solicitação de consulta rejeitada com sucesso." });
         }
         catch (error) {
-            console.error("Erro ao rejeitar consulta:", error);
-            res.status(500).json({ error: "Erro ao rejeitar consulta." });
+            console.error("❌ Erro detalhado ao rejeitar consulta:", {
+                error,
+                message: error.message,
+                stack: error.stack
+            });
+            res.status(500).json({ error: "Erro interno do servidor ao rejeitar consulta." });
         }
     }
     async reschedule(req, res) {
@@ -546,32 +614,48 @@ class AppointmentManagementController {
     }
     async confirmAppointment(req, res) {
         try {
+            console.log('🔍 ConfirmAppointment - Iniciando método');
+            console.log('🔍 ConfirmAppointment - req.params:', req.params);
+            console.log('🔍 ConfirmAppointment - req.body:', req.body);
+            console.log('🔍 ConfirmAppointment - req.userId:', req.userId);
+            console.log('🔍 ConfirmAppointment - req.isAdmin:', req.isAdmin);
             const { appointmentId } = req.params;
             console.log('Tentando confirmar agendamento:', { appointmentId });
             if (!appointmentId || isNaN(parseInt(appointmentId))) {
+                console.log('❌ ID de agendamento inválido:', appointmentId);
                 res.status(400).json({ error: "ID de agendamento inválido." });
                 return;
             }
+            console.log('🔍 Buscando solicitação pendente com ID:', parseInt(appointmentId));
             const appointmentRequest = await prisma.appointmentRequest.findUnique({
                 where: { id: parseInt(appointmentId) },
                 include: { patient: true }
             });
             console.log('Solicitação encontrada:', appointmentRequest);
             if (appointmentRequest) {
+                console.log('✅ Encontrou solicitação pendente, processando...');
                 if (appointmentRequest.status === client_1.AppointmentStatus.CONFIRMED) {
+                    console.log('❌ Solicitação já confirmada');
                     res.status(400).json({ error: "Esta solicitação já foi confirmada." });
                     return;
                 }
+                console.log('🔍 Verificando disponibilidade do horário...');
                 const isTimeSlotFree = await this.checkTimeSlotAvailability(appointmentRequest.patientId, appointmentRequest.requestedDate, appointmentRequest.requestedTime);
+                console.log('🔍 Horário disponível:', isTimeSlotFree);
                 if (!isTimeSlotFree) {
+                    console.log('❌ Horário já ocupado');
                     res.status(409).json({ error: "O horário solicitado já está ocupado." });
                     return;
                 }
+                console.log('🔍 Verificando horário de funcionamento...');
                 const isWithinWorkingHours = this.checkWorkingHours(appointmentRequest.requestedDate, appointmentRequest.requestedTime);
+                console.log('🔍 Dentro do horário de funcionamento:', isWithinWorkingHours);
                 if (!isWithinWorkingHours) {
+                    console.log('❌ Fora do horário de funcionamento');
                     res.status(400).json({ error: "O horário solicitado está fora do horário de funcionamento." });
                     return;
                 }
+                console.log('✅ Todas as validações passaram, criando agendamento...');
                 const newAppointment = await prisma.appointment.create({
                     data: {
                         patientId: appointmentRequest.patientId,
@@ -581,6 +665,7 @@ class AppointmentManagementController {
                         status: client_1.AppointmentStatus.CONFIRMED
                     }
                 });
+                console.log('✅ Novo agendamento criado:', newAppointment);
                 await prisma.appointmentRequest.update({
                     where: { id: parseInt(appointmentId) },
                     data: {
@@ -588,7 +673,9 @@ class AppointmentManagementController {
                         appointmentId: newAppointment.id
                     }
                 });
+                console.log('✅ Status da solicitação atualizado');
                 try {
+                    console.log('🔍 Criando notificações...');
                     await notificationService_1.NotificationService.createAppointmentConfirmation(appointmentRequest.patientId, {
                         date: appointmentRequest.requestedDate,
                         time: appointmentRequest.requestedTime,
@@ -599,6 +686,7 @@ class AppointmentManagementController {
                         time: appointmentRequest.requestedTime,
                         notes: appointmentRequest.notes,
                     });
+                    console.log('✅ Notificações criadas com sucesso');
                 }
                 catch (notificationError) {
                     console.error("Erro ao criar notificações:", notificationError);
@@ -610,19 +698,23 @@ class AppointmentManagementController {
                 });
                 return;
             }
+            console.log('🔍 Não encontrou solicitação pendente, buscando agendamento existente...');
             const appointment = await prisma.appointment.findUnique({
                 where: { id: parseInt(appointmentId) },
                 include: { patient: true }
             });
             console.log('Agendamento existente encontrado:', appointment);
             if (!appointment) {
+                console.log('❌ Agendamento não encontrado');
                 res.status(404).json({ error: "Agendamento não encontrado." });
                 return;
             }
             if (appointment.status === client_1.AppointmentStatus.CONFIRMED) {
+                console.log('❌ Agendamento já confirmado');
                 res.status(400).json({ error: "Este agendamento já está confirmado." });
                 return;
             }
+            console.log('✅ Atualizando status do agendamento para CONFIRMED...');
             const updatedAppointment = await prisma.appointment.update({
                 where: { id: parseInt(appointmentId) },
                 data: { status: client_1.AppointmentStatus.CONFIRMED },
@@ -647,16 +739,30 @@ class AppointmentManagementController {
         return slots;
     }
     async checkTimeSlotAvailability(patientId, date, time) {
+        console.log('🔍 checkTimeSlotAvailability - Verificando disponibilidade:', {
+            patientId,
+            date,
+            time
+        });
         const existingAppointment = await prisma.appointment.findFirst({
             where: {
                 date: date,
                 time: time,
-                patientId
+                status: {
+                    not: client_1.AppointmentStatus.CANCELLED
+                }
             }
         });
-        return !existingAppointment;
+        console.log('🔍 checkTimeSlotAvailability - Agendamento existente:', existingAppointment);
+        const isAvailable = !existingAppointment;
+        console.log('🔍 checkTimeSlotAvailability - Horário disponível:', isAvailable);
+        return isAvailable;
     }
     checkWorkingHours(date, time) {
+        console.log('🔍 checkWorkingHours - Verificando horário de funcionamento:', {
+            date,
+            time
+        });
         const [hours, minutes] = time.split(':').map(Number);
         const appointmentTime = new Date(date);
         appointmentTime.setHours(hours, minutes);
@@ -664,7 +770,14 @@ class AppointmentManagementController {
         startTime.setHours(8, 0, 0);
         const endTime = new Date(date);
         endTime.setHours(18, 0, 0);
-        return appointmentTime >= startTime && appointmentTime <= endTime;
+        const isWithinHours = appointmentTime >= startTime && appointmentTime <= endTime;
+        console.log('🔍 checkWorkingHours - Resultado:', {
+            appointmentTime: appointmentTime.toLocaleString(),
+            startTime: startTime.toLocaleString(),
+            endTime: endTime.toLocaleString(),
+            isWithinHours
+        });
+        return isWithinHours;
     }
 }
 exports.default = new AppointmentManagementController();

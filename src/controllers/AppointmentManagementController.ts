@@ -307,7 +307,7 @@ class AppointmentManagementController {
       const allAppointments = [
         ...appointments.map(apt => ({
           id: apt.id,
-          date: apt.date,
+          date: apt.date.toISOString(),
           time: apt.time,
           status: apt.status,
           type: 'confirmed',
@@ -315,17 +315,17 @@ class AppointmentManagementController {
         })),
         ...pendingRequests.map((req: any) => ({
           id: req.id,
-          date: req.requestedDate,
-          time: req.requestedTime,
+          requestedDate: req.requestedDate.toISOString(),
+          requestedTime: req.requestedTime,
           status: req.status,
           type: 'pending',
           patient: req.patient
         }))
       ].sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
+        const dateA = new Date(a.date || a.requestedDate);
+        const dateB = new Date(b.date || b.requestedDate);
         if (dateA.getTime() === dateB.getTime()) {
-          return a.time.localeCompare(b.time);
+          return (a.time || a.requestedTime).localeCompare(b.time || b.requestedTime);
         }
         return dateA.getTime() - dateB.getTime();
       });
@@ -650,6 +650,31 @@ class AppointmentManagementController {
             appointmentId: newAppointment.id
           }
         });
+
+        // Criar notificação de confirmação
+        try {
+          await NotificationService.createAppointmentConfirmation(
+            appointmentRequest.patientId,
+            {
+              date: appointmentRequest.requestedDate,
+              time: appointmentRequest.requestedTime,
+              notes: appointmentRequest.notes,
+            }
+          );
+
+          // Criar lembrete 24h antes
+          await NotificationService.createAppointmentReminder(
+            appointmentRequest.patientId,
+            {
+              date: appointmentRequest.requestedDate,
+              time: appointmentRequest.requestedTime,
+              notes: appointmentRequest.notes,
+            }
+          );
+        } catch (notificationError) {
+          console.error("Erro ao criar notificações:", notificationError);
+          // Não falhar a confirmação se as notificações falharem
+        }
 
         console.log('Novo agendamento criado:', newAppointment);
         res.status(200).json({ message: "Agendamento confirmado com sucesso." });

@@ -8,7 +8,7 @@ async function createAdmin() {
   const email = "tati.dent11@gmail.com";  // Defina um e-mail para o admin
   const password = "T4T1An3Th1ag0";        // Defina uma senha segura
 
-  // Verifica se o usuário admin já existe
+  
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     console.log("Usuário admin já existe.");

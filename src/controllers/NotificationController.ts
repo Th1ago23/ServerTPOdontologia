@@ -98,6 +98,25 @@ class NotificationController {
     }
   }
 
+  // Deletar notificação
+  async deleteNotification(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const patientId = req.patientId;
+      const { notificationId } = req.params;
+
+      if (!patientId) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+
+      await NotificationService.deleteNotification(parseInt(notificationId), patientId);
+      res.status(200).json({ message: "Notificação deletada com sucesso" });
+    } catch (error) {
+      console.error("Erro ao deletar notificação:", error);
+      res.status(500).json({ error: "Erro ao deletar notificação" });
+    }
+  }
+
   // Processar notificações agendadas (endpoint para cron job)
   async processScheduledNotifications(req: Request, res: Response): Promise<void> {
     try {
